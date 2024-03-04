@@ -1,0 +1,59 @@
+   Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: TextField(
+                decoration: InputDecoration(
+                  border: OutlineInputBorder(),
+                  labelText: 'Área: ',
+                  // Adiciona os ícones à direita do input
+                  suffixIcon: IntrinsicHeight(
+                    child: Row(
+                      mainAxisSize: MainAxisSize
+                          .min, // Isso fará com que o Row envolva seus filhos
+                      children: [
+                        Container(
+                          height: 62,
+                          decoration: BoxDecoration(
+                            color: ColorConfig
+                                .amarelo, // Substitua com sua cor de fundo desejada
+                            border: Border.all(
+                              color: ColorConfig
+                                  .preto, // Substitua com a cor da borda desejada
+                            ),
+                          ),
+                          child: IconButton(
+                            icon: Icon(Icons.visibility_off),
+                            color: Colors
+                                .black, // Substitua com a cor do ícone desejada
+                            onPressed: () {
+                              // Adicione o que deve acontecer quando o ícone é clicado
+                              print('Ícone de visibilidade clicado!');
+                            },
+                          ),
+                        ),
+                        Container(
+                          height: 62,
+                          decoration: BoxDecoration(
+                            border: Border.all(
+                              color: ColorConfig
+                                  .preto, // Substitua com a cor da borda desejada
+                            ),
+                            color: ColorConfig
+                                .amarelo, // Substitua com sua cor de fundo desejada
+                          ),
+                          child: IconButton(
+                            icon: Icon(Icons.menu),
+                            color: Colors
+                                .black, // Substitua com a cor do ícone desejada
+                            onPressed: () {
+                              // Adicione o que deve acontecer quando o ícone é clicado
+                              print('Ícone de menu clicado!');
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                // Configurações adicionais do TextField, se necessário
+              ),
+            ),
