@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:kluber/class/color_config.dart';
 import 'package:kluber/class/float_buttom.dart';
-import 'package:kluber/pages/planos_lub/cad_plano.dart';
+// import 'package:kluber/pages/planos_lub/cad_plano.dart';
 import 'package:kluber/pages/planos_lub/planos.dart';
 
 class HomePage extends StatefulWidget {
@@ -17,28 +17,28 @@ class _HomePageState extends State<HomePage> {
     return Scaffold(
       body: Center(
         child: Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
-          Container(
+          SizedBox(
             width: 180,
             height: 180,
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
-                primary: ColorConfig.amarelo, // Cor de fundo
-                onPrimary: Colors.black, // Cor do ícone e do texto
+                foregroundColor: Colors.black,
+                backgroundColor: ColorConfig.amarelo, // Cor do ícone e do texto
                 elevation: 2, // Elevação do botão
                 shape: RoundedRectangleBorder(
                   borderRadius:
                       BorderRadius.circular(10), // Cantos arredondados
                 ),
-                padding: EdgeInsets.symmetric(
+                padding: const EdgeInsets.symmetric(
                     horizontal: 20,
                     vertical: 10), // Espaçamento interno do botão
               ),
               onPressed: () {
                 Navigator.of(context).push(MaterialPageRoute(
-                  builder: (context) => Planos(),
+                  builder: (context) => const Planos(),
                 ));
               },
-              child: Column(
+              child: const Column(
                 mainAxisSize:
                     MainAxisSize.min, // Use min para evitar esticar a coluna
                 children: <Widget>[
@@ -54,26 +54,26 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
           ),
-          Container(
+          SizedBox(
             width: 180,
             height: 180,
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
-                primary: ColorConfig.amarelo,
-                onPrimary: Colors.black, // Cor do ícone e do texto
+                foregroundColor: Colors.black,
+                backgroundColor: ColorConfig.amarelo, // Cor do ícone e do texto
                 elevation: 2, // Elevação do botão
                 shape: RoundedRectangleBorder(
                   borderRadius:
                       BorderRadius.circular(10), // Cantos arredondados
                 ),
-                padding: EdgeInsets.symmetric(
+                padding: const EdgeInsets.symmetric(
                     horizontal: 20,
                     vertical: 10), // Espaçamento interno do botão
               ),
               onPressed: () {
                 // Ação quando o botão é pressionado
               },
-              child: Column(
+              child: const Column(
                 mainAxisSize:
                     MainAxisSize.min, // Use min para evitar esticar a coluna
                 children: <Widget>[

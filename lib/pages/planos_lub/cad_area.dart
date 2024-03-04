@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart';
+// import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:kluber/class/color_config.dart';
 import 'package:kluber/db/database.dart';
@@ -54,8 +54,8 @@ class _CadAreaState extends State<CadArea> {
       appBar: AppBar(
         title: Center(
           child: Text(
-            'plano #${id}'.toUpperCase(),
-            style: TextStyle(
+            'plano #$id'.toUpperCase(),
+            style: const TextStyle(
               color: Color(0xFF000000),
               fontSize: 16,
               fontWeight: FontWeight.bold,
@@ -77,31 +77,31 @@ class _CadAreaState extends State<CadArea> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Container(
+                      padding: const EdgeInsets.only(top: 3, left: 10),
                       child: Text(
                         'Plano: $id',
-                        style: TextStyle(
+                        style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
                             color: Colors.black),
                       ),
-                      padding: EdgeInsets.only(top: 3, left: 10),
                     ),
                     Container(
+                      padding: const EdgeInsets.only(top: 3, left: 10),
                       child: Text(
                         'Cliente: $cliente',
-                        style: TextStyle(
+                        style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
                             color: ColorConfig.cinza),
                       ),
-                      padding: EdgeInsets.only(top: 3, left: 10),
                     ),
                   ],
                 ),
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.all(8.0),
+            const Padding(
+              padding: EdgeInsets.all(8.0),
               child: TextField(
                 decoration: InputDecoration(
                   border: OutlineInputBorder(),
@@ -115,34 +115,34 @@ class _CadAreaState extends State<CadArea> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Container(
+                  SizedBox(
                     width: 180,
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        primary: Colors.black,
-                        onPrimary: Colors.white,
+                        foregroundColor: Colors.white,
+                        backgroundColor: Colors.black,
                         elevation: 2,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10),
                         ),
                       ),
                       onPressed: () {},
-                      child: Text('Cancelar'),
+                      child: const Text('Cancelar'),
                     ),
                   ),
-                  Container(
+                  SizedBox(
                     width: 180,
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        primary: ColorConfig.amarelo,
-                        onPrimary: Colors.black,
+                        foregroundColor: Colors.black,
+                        backgroundColor: ColorConfig.amarelo,
                         elevation: 2,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10),
                         ),
                       ),
                       onPressed: () {},
-                      child: Text('Salvar'),
+                      child: const Text('Salvar'),
                     ),
                   ),
                 ],

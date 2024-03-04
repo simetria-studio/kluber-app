@@ -4,9 +4,9 @@ import 'package:kluber/class/color_config.dart';
 import 'package:flutter_typeahead/flutter_typeahead.dart';
 import 'package:kluber/class/float_buttom.dart';
 import 'package:kluber/pages/planos_lub/area.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+// import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
-import 'package:intl/intl.dart';
+// import 'package:intl/intl.dart';
 import 'dart:convert';
 import 'package:kluber/db/database.dart';
 
@@ -21,12 +21,13 @@ class _CadPlanoLubState extends State<CadPlanoLub> {
   bool userDataLoaded = false;
   late DateTime? entryDate;
   late DateTime? revDate;
-  TextEditingController _clienteController = TextEditingController();
-  TextEditingController _clienteCodigoController = TextEditingController();
-  TextEditingController _dataCadController = TextEditingController();
-  TextEditingController _resKluberController = TextEditingController();
-  TextEditingController _resAreaController = TextEditingController();
-  TextEditingController _dataRevController = TextEditingController();
+  final TextEditingController _clienteController = TextEditingController();
+  final TextEditingController _clienteCodigoController =
+      TextEditingController();
+  final TextEditingController _dataCadController = TextEditingController();
+  final TextEditingController _resKluberController = TextEditingController();
+  final TextEditingController _resAreaController = TextEditingController();
+  final TextEditingController _dataRevController = TextEditingController();
 
   final DatabaseHelper _databaseHelper = DatabaseHelper();
 
@@ -52,7 +53,6 @@ class _CadPlanoLubState extends State<CadPlanoLub> {
       int id = await _databaseHelper.insertPlanoLub(planoLubData);
       return id;
     } catch (e) {
-      print(e);
       return -1; // Retorna -1 em caso de falha
     }
   }
@@ -85,10 +85,11 @@ class _CadPlanoLubState extends State<CadPlanoLub> {
       firstDate: DateTime(2000),
       lastDate: DateTime(2101),
     );
-    if (pickedDate != null)
+    if (pickedDate != null) {
       setState(() {
         _dataCadController.text = pickedDate.toString().split(" ")[0];
       });
+    }
   }
 
   Future<void> _selectRecDate(BuildContext context) async {
@@ -98,16 +99,14 @@ class _CadPlanoLubState extends State<CadPlanoLub> {
       firstDate: DateTime(2000),
       lastDate: DateTime(2101),
     );
-    if (picked != null)
+    if (picked != null) {
       setState(() {
         _dataRevController.text = picked.toString().split(" ")[0];
       });
+    }
   }
 
   Future<List<Map<String, dynamic>>> _fetchClientes(String searchText) async {
-    final prefs = await SharedPreferences.getInstance();
-    final codigoEmpresa = prefs.getString('codigo_empresa') ?? 0;
-
     final response = await http.post(
       Uri.parse(
           '${ApiConfig.apiUrl}/get-clientes'), // Remova o parâmetro 'page' da URL
@@ -134,9 +133,6 @@ class _CadPlanoLubState extends State<CadPlanoLub> {
   }
 
   Future<List<Map<String, dynamic>>> _fetchUsers(String searchText) async {
-    final prefs = await SharedPreferences.getInstance();
-    final codigoEmpresa = prefs.getString('codigo_empresa') ?? 0;
-
     final response = await http.post(
       Uri.parse(
           '${ApiConfig.apiUrl}/get-users-kluber'), // Remova o parâmetro 'page' da URL
@@ -169,7 +165,7 @@ class _CadPlanoLubState extends State<CadPlanoLub> {
         title: Center(
           child: Text(
             'Novo de Plano de Lubrificação'.toUpperCase(),
-            style: TextStyle(
+            style: const TextStyle(
               color: Color(0xFF000000),
               fontSize: 16,
               fontWeight: FontWeight.bold,
@@ -182,14 +178,14 @@ class _CadPlanoLubState extends State<CadPlanoLub> {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
             Padding(
               padding: const EdgeInsets.all(8.0),
               child: TypeAheadField<Map<String, dynamic>>(
                 textFieldConfiguration: TextFieldConfiguration(
                   controller: _clienteController,
                   enabled: userDataLoaded,
-                  decoration: InputDecoration(
+                  decoration: const InputDecoration(
                     labelText: 'Cliente',
                     border: OutlineInputBorder(),
                   ),
@@ -221,12 +217,12 @@ class _CadPlanoLubState extends State<CadPlanoLub> {
                 },
               ),
             ),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
             Padding(
               padding: const EdgeInsets.all(8.0),
               child: TextField(
                 controller: _dataCadController,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   labelText: 'Data de cadastro',
                   border: OutlineInputBorder(),
                 ),
@@ -235,12 +231,12 @@ class _CadPlanoLubState extends State<CadPlanoLub> {
                 },
               ),
             ),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
             Padding(
               padding: const EdgeInsets.all(8.0),
               child: TextField(
                 controller: _dataRevController,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   labelText: 'Data de revisão',
                   border: OutlineInputBorder(),
                 ),
@@ -249,25 +245,25 @@ class _CadPlanoLubState extends State<CadPlanoLub> {
                 },
               ),
             ),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
             Padding(
               padding: const EdgeInsets.all(8.0),
               child: TextFormField(
                 controller: _resAreaController,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   labelText: 'Responsável pela lubrificação da área',
                   border: OutlineInputBorder(),
                 ),
               ),
             ),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
             Padding(
               padding: const EdgeInsets.all(8.0),
               child: TypeAheadField<Map<String, dynamic>>(
                 textFieldConfiguration: TextFieldConfiguration(
                   controller: _resKluberController,
                   enabled: userDataLoaded,
-                  decoration: InputDecoration(
+                  decoration: const InputDecoration(
                     labelText: 'Responsável Klüber',
                     border: OutlineInputBorder(),
                   ),
@@ -295,8 +291,8 @@ class _CadPlanoLubState extends State<CadPlanoLub> {
                 },
               ),
             ),
-            SizedBox(height: 20),
-            Container(
+            const SizedBox(height: 20),
+            SizedBox(
               width: 200,
               height: 50,
               child: ElevatedButton(
@@ -311,14 +307,14 @@ class _CadPlanoLubState extends State<CadPlanoLub> {
                     );
                   }
                 },
-                child: Text('Próximo'),
                 style: ElevatedButton.styleFrom(
-                  primary: ColorConfig.amarelo,
-                  onPrimary: ColorConfig.preto,
+                  foregroundColor: ColorConfig.preto,
+                  backgroundColor: ColorConfig.amarelo,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
                   ),
                 ),
+                child: const Text('Próximo'),
               ),
             ),
           ],
