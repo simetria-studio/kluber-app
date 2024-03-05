@@ -69,4 +69,33 @@ class DatabaseHelper {
       return null;
     }
   }
+
+  Future<List<Map<String, dynamic>>> getAreasByPlanoId(int planoId) async {
+    Database db = await database;
+    final List<Map<String, dynamic>> areas = await db.query(
+      'area',
+      where: 'plano_id = ?',
+      whereArgs: [planoId],
+    );
+    return areas;
+  }
+
+  Future<void> excluirArea(int areaId) async {
+    final db = await database;
+    await db.delete(
+      'area',
+      where: 'id = ?',
+      whereArgs: [areaId],
+    );
+  }
+
+  Future<void> editarArea(Map<String, dynamic> areaData) async {
+    final db = await database;
+    await db.update(
+      'area',
+      areaData,
+      where: 'id = ?',
+      whereArgs: [areaData['id']],
+    );
+  }
 }

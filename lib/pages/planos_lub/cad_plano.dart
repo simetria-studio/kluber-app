@@ -3,12 +3,12 @@ import 'package:kluber/class/api_config.dart';
 import 'package:kluber/class/color_config.dart';
 import 'package:flutter_typeahead/flutter_typeahead.dart';
 import 'package:kluber/class/float_buttom.dart';
-import 'package:kluber/pages/planos_lub/area.dart';
 // import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 // import 'package:intl/intl.dart';
 import 'dart:convert';
 import 'package:kluber/db/database.dart';
+import 'package:kluber/pages/planos_lub/arvore.dart';
 
 class CadPlanoLub extends StatefulWidget {
   const CadPlanoLub({super.key});
@@ -302,7 +302,7 @@ class _CadPlanoLubState extends State<CadPlanoLub> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => Area(idPlano: idPlano),
+                        builder: (context) => Arvore(idPlano: idPlano),
                       ),
                     );
                   }

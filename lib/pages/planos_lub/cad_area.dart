@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:kluber/class/color_config.dart';
 import 'package:kluber/db/database.dart';
+import 'package:kluber/pages/planos_lub/arvore.dart';
 
 class CadArea extends StatefulWidget {
   final int idPlano;
@@ -12,6 +13,9 @@ class CadArea extends StatefulWidget {
 }
 
 class _CadAreaState extends State<CadArea> {
+  final DatabaseHelper _databaseHelper = DatabaseHelper();
+
+  final TextEditingController _areaController = TextEditingController();
   String cliente = '';
   String dataCadastro = '';
   String dataRevisao = '';
@@ -30,6 +34,24 @@ class _CadAreaState extends State<CadArea> {
       // Trate o caso em que não há plano encontrado pelo ID
       // Por exemplo, você pode retornar um mapa vazio
       return {};
+    }
+  }
+
+  Future<int> salvarDados() async {
+    try {
+      String area = _areaController.text;
+
+      // Organiza os dados em um mapa
+      Map<String, dynamic> areaCad = {
+        'nome': area,
+        'plano_id': widget.idPlano,
+      };
+
+      // Insere os dados na base de dados e retorna o ID do plano inserido
+      int id = await _databaseHelper.insertArea(areaCad);
+      return id;
+    } catch (e) {
+      return -1; // Retorna -1 em caso de falha
     }
   }
 
@@ -100,10 +122,11 @@ class _CadAreaState extends State<CadArea> {
                 ),
               ),
             ),
-            const Padding(
-              padding: EdgeInsets.all(8.0),
+            Padding(
+              padding: const EdgeInsets.all(8.0),
               child: TextField(
-                decoration: InputDecoration(
+                controller: _areaController,
+                decoration: const InputDecoration(
                   border: OutlineInputBorder(),
                   labelText: 'Área: ',
                 ),
@@ -141,7 +164,18 @@ class _CadAreaState extends State<CadArea> {
                           borderRadius: BorderRadius.circular(10),
                         ),
                       ),
-                      onPressed: () {},
+                      onPressed: () async {
+                        int idPlano = await salvarDados();
+                        if (idPlano != -1) {
+                          print(id);
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => Arvore(idPlano: id),
+                            ),
+                          );
+                        }
+                      },
                       child: const Text('Salvar'),
                     ),
                   ),
