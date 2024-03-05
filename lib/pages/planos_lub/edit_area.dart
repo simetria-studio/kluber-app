@@ -1,22 +1,33 @@
 import 'package:flutter/material.dart';
+import 'package:kluber/db/database.dart';
 
 class EditArea extends StatefulWidget {
-  final Map<String, dynamic> areaData;
+  final int areaId;
 
-  const EditArea({Key? key, required this.areaData}) : super(key: key);
+  const EditArea({Key? key, required this.areaId}) : super(key: key);
 
   @override
   State<EditArea> createState() => _EditAreaState();
 }
 
 class _EditAreaState extends State<EditArea> {
+  final DatabaseHelper databaseHelper = DatabaseHelper();
   late TextEditingController _nomeController;
 
   @override
   void initState() {
     super.initState();
-    _nomeController = TextEditingController(text: widget.areaData['nome']);
-    // Adicione mais controllers para outros campos, se necessário
+    _carregarDadosArea();
+  }
+
+  Future<void> _carregarDadosArea() async {
+    var areaData = await databaseHelper.getAreaById(widget.areaId);
+    if (areaData != null) {
+      setState(() {
+        _nomeController = TextEditingController(text: areaData['nome']);
+        // Inicialize outros controladores para outros campos, se necessário
+      });
+    }
   }
 
   @override
@@ -50,17 +61,11 @@ class _EditAreaState extends State<EditArea> {
 
   void _salvarAlteracoes() {
     final Map<String, dynamic> novosDados = {
-      'id': widget.areaData['id'],
+      'id': widget.areaId,
       'nome': _nomeController.text,
-      // Adicione mais chaves para outros dados da área
+      // Adicione mais chaves para outros dados da área, se necessário
     };
-
-    // Chame a função para editar a área no banco de dados
-    // Passando o mapa contendo os novos dados
-    // Por exemplo: databaseHelper.editarArea(novosDados);
-
-    // Depois de salvar as alterações, você pode navegar para outra tela
-    // Ou exibir uma mensagem de sucesso, etc.
+    Navigator.of(context).pop(novosDados);
   }
 
   @override

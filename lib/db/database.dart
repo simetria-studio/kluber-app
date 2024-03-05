@@ -38,6 +38,14 @@ class DatabaseHelper {
     FOREIGN KEY (plano_id) REFERENCES planolub (id)
   )
   ''');
+    await db.execute('''
+  CREATE TABLE subarea (
+    id INTEGER PRIMARY KEY,
+    nome TEXT,
+    area_id INTEGER,
+    FOREIGN KEY (area_id) REFERENCES area (id)
+  )
+  ''');
   }
 
   Future<int> insertPlanoLub(Map<String, dynamic> planoLubData) async {
@@ -49,6 +57,11 @@ class DatabaseHelper {
   Future<int> insertArea(Map<String, dynamic> areaData) async {
     Database db = await database;
     return await db.insert('area', areaData);
+  }
+
+  Future<int> insertSubArea(Map<String, dynamic> subAreaData) async {
+    Database db = await database;
+    return await db.insert('subarea', subAreaData);
   }
 
   Future<List<Map<String, dynamic>>> getPlanosLub() async {
@@ -87,6 +100,20 @@ class DatabaseHelper {
       where: 'id = ?',
       whereArgs: [areaId],
     );
+  }
+
+  Future<Map<String, dynamic>?> getAreaById(int areaId) async {
+    Database db = await database;
+    List<Map<String, dynamic>> results = await db.query(
+      'area',
+      where: 'id = ?',
+      whereArgs: [areaId],
+    );
+    if (results.isNotEmpty) {
+      return results.first;
+    } else {
+      return null;
+    }
   }
 
   Future<void> editarArea(Map<String, dynamic> areaData) async {

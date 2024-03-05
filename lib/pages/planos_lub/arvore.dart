@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:kluber/class/color_config.dart';
 import 'package:kluber/db/database.dart';
 import 'package:kluber/pages/planos_lub/cad_area.dart';
+import 'package:kluber/pages/planos_lub/cad_subarea.dart';
 import 'package:kluber/pages/planos_lub/edit_area.dart';
 
 class Arvore extends StatefulWidget {
@@ -54,6 +55,15 @@ class _AreaState extends State<Arvore> {
     await databaseHelper.excluirArea(areaId);
     // Atualiza a lista de áreas após a exclusão
     await _carregarDados();
+  }
+
+  void _atualizarArea(Map<String, dynamic> novosDados) {
+    setState(() {
+      final index = areas.indexWhere((area) => area['id'] == novosDados['id']);
+      if (index != -1) {
+        areas[index] = novosDados;
+      }
+    });
   }
 
   @override
@@ -215,7 +225,19 @@ class _AreaState extends State<Arvore> {
                                             child: ListBody(
                                               children: <Widget>[
                                                 ElevatedButton(
-                                                  onPressed: () {},
+                                                  onPressed: () {
+                                                    Navigator.push(
+                                                      context,
+                                                      MaterialPageRoute(
+                                                        builder: (context) =>
+                                                            CadSubArea(
+                                                                areaId:
+                                                                    areas[index]
+                                                                        ['id'],
+                                                                idPlano: id),
+                                                      ),
+                                                    );
+                                                  },
                                                   style:
                                                       ElevatedButton.styleFrom(
                                                     backgroundColor:
@@ -228,27 +250,35 @@ class _AreaState extends State<Arvore> {
                                                   ),
                                                 ),
                                                 ElevatedButton(
-                                                  onPressed: () {
-                                                    Navigator.push(
+                                                  onPressed: () async {
+                                                    // Substitua `context` e `suaAreaId` pelos valores apropriados
+                                                    final novosDados =
+                                                        await Navigator.push(
                                                       context,
                                                       MaterialPageRoute(
                                                         builder: (context) =>
                                                             EditArea(
-                                                                areaData: areas[
-                                                                    index]),
+                                                          areaId: areas[index]
+                                                              ['id'],
+                                                        ),
                                                       ),
                                                     );
+
+                                                    // Verifica se novosDados não é nulo
+                                                    if (novosDados != null) {
+                                                      // Aqui você chama o método para atualizar os dados no banco
+                                                      await databaseHelper
+                                                          .editarArea(
+                                                              novosDados);
+                                                      // Atualiza a lista de áreas
+                                                      _atualizarArea(
+                                                          novosDados);
+                                                    }
                                                   },
-                                                  style:
-                                                      ElevatedButton.styleFrom(
-                                                    backgroundColor:
-                                                        ColorConfig.amarelo,
-                                                  ),
                                                   child: const Text(
-                                                    'Editar',
-                                                    style: TextStyle(
-                                                        color: Colors.black),
-                                                  ),
+                                                      'Editar Área',
+                                                      style: TextStyle(
+                                                          color: Colors.black)),
                                                 ),
                                                 ElevatedButton(
                                                   onPressed: () {
