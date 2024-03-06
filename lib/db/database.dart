@@ -46,6 +46,14 @@ class DatabaseHelper {
     FOREIGN KEY (area_id) REFERENCES area (id)
   )
   ''');
+    await db.execute('''
+  CREATE TABLE linha (
+    id INTEGER PRIMARY KEY,
+    nome TEXT,
+    subarea_id INTEGER,
+    FOREIGN KEY (subarea_id) REFERENCES subarea (id)
+  )
+  ''');
   }
 
   Future<int> insertPlanoLub(Map<String, dynamic> planoLubData) async {
@@ -62,6 +70,11 @@ class DatabaseHelper {
   Future<int> insertSubArea(Map<String, dynamic> subAreaData) async {
     Database db = await database;
     return await db.insert('subarea', subAreaData);
+  }
+
+  Future<int> insertLinha(Map<String, dynamic> linhaData) async {
+    Database db = await database;
+    return await db.insert('linha', linhaData);
   }
 
   Future<List<Map<String, dynamic>>> getPlanosLub() async {
@@ -93,8 +106,37 @@ class DatabaseHelper {
     return areas;
   }
 
+  Future<List<Map<String, dynamic>>> getSubareasByAreaId(int areaId) async {
+    final Database db = await database;
+    final List<Map<String, dynamic>> subareasResult = await db.query(
+      'subarea',
+      where: 'area_id = ?',
+      whereArgs: [areaId],
+    );
+    return subareasResult;
+  }
+
+  Future<List<Map<String, dynamic>>> getLinhasBySubareaId(int subareaId) async {
+    final Database db = await database;
+    final List<Map<String, dynamic>> linhasResult = await db.query(
+      'linha',
+      where: 'subarea_id = ?',
+      whereArgs: [subareaId],
+    );
+    return linhasResult;
+  }
+
   Future<void> excluirArea(int areaId) async {
     final db = await database;
+
+    // Buscar e excluir todas as subáreas relacionadas à área
+    await db.delete(
+      'subarea',
+      where: 'area_id = ?',
+      whereArgs: [areaId],
+    );
+
+    // Em seguida, excluir a área
     await db.delete(
       'area',
       where: 'id = ?',
