@@ -391,7 +391,7 @@ class _AreaState extends State<Arvore> {
                                 children: [
                                   Container(
                                     width: double.infinity,
-                                    padding: const EdgeInsets.only(left: 20),
+                                    padding: const EdgeInsets.only(left: 8),
                                     child: Column(
                                       mainAxisAlignment:
                                           MainAxisAlignment.start,
@@ -545,7 +545,7 @@ class _AreaState extends State<Arvore> {
                                                                               }
                                                                             },
                                                                             child:
-                                                                                const Text('Editar Área', style: TextStyle(color: Colors.black)),
+                                                                                const Text('Editar Sub Area', style: TextStyle(color: Colors.black)),
                                                                           ),
                                                                           ElevatedButton(
                                                                             onPressed:
@@ -722,7 +722,7 @@ class _AreaState extends State<Arvore> {
                                                                                   backgroundColor: ColorConfig.amarelo,
                                                                                 ),
                                                                                 child: const Text(
-                                                                                  'Cadastrar Linha',
+                                                                                  'Cadastrar TAG e MOTOR',
                                                                                   style: TextStyle(color: Colors.black),
                                                                                 ),
                                                                               ),
@@ -746,7 +746,7 @@ class _AreaState extends State<Arvore> {
                                                                                     _atualizarArea(novosDados);
                                                                                   }
                                                                                 },
-                                                                                child: const Text('Editar Área', style: TextStyle(color: Colors.black)),
+                                                                                child: const Text('Editar Linha', style: TextStyle(color: Colors.black)),
                                                                               ),
                                                                               ElevatedButton(
                                                                                 onPressed: () {
