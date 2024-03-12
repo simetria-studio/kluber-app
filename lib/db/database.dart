@@ -15,7 +15,8 @@ class DatabaseHelper {
   Future<Database> _initDatabase() async {
     Directory documentsDirectory = await getApplicationDocumentsDirectory();
     String path = join(documentsDirectory.path, 'db/planos.db');
-    return await openDatabase(path, version: 1, onCreate: _onCreate);
+    return await openDatabase(path,
+        version: 1, onCreate: _onCreate, readOnly: false);
   }
 
   Future<void> _onCreate(Database db, int version) async {
@@ -54,6 +55,45 @@ class DatabaseHelper {
     FOREIGN KEY (subarea_id) REFERENCES subarea (id)
   )
   ''');
+    await db.execute('''
+  CREATE TABLE tag_maquina (
+    id INTEGER PRIMARY KEY,
+    tag_nome TEXT,
+    maquina_nome TEXT,
+    linha_id INTEGER,
+    FOREIGN KEY (linha_id) REFERENCES linha (id)
+  )
+  ''');
+
+    await db.execute('''
+  CREATE TABLE conjunto_equip (
+    id INTEGER PRIMARY KEY,
+    conj_nome TEXT,
+    equi_nome TEXT,
+    tag_maquina_id INTEGER,
+    FOREIGN KEY (tag_maquina_id) REFERENCES tag_maquina (id)
+  )
+  ''');
+    await db.execute('''
+  CREATE TABLE pontos (
+    id INTEGER PRIMARY KEY,
+    component_name TEXT,
+    component_codigo TEXT,
+    qty_pontos TEXT,
+    atv_breve_name TEXT,
+    atv_breve_codigo TEXT,
+    lub_name TEXT,
+    lub_codigo TEXT,
+    qty_material TEXT,
+    cond_op_name TEXT,
+    cond_op_codigo TEXT,
+    period_name TEXT,
+    period_codigo TEXT,
+    qty_pessoas TEXT,
+    conjunto_equip_id INTEGER,
+    FOREIGN KEY (conjunto_equip_id) REFERENCES conjunto_equip (id)
+  )
+  ''');
   }
 
   Future<int> insertPlanoLub(Map<String, dynamic> planoLubData) async {
@@ -77,6 +117,21 @@ class DatabaseHelper {
     return await db.insert('linha', linhaData);
   }
 
+  Future<int> insertTag(Map<String, dynamic> tagData) async {
+    Database db = await database;
+    return await db.insert('tag_maquina', tagData);
+  }
+
+  Future<int> insertConjuntoAndEquip(Map<String, dynamic> conjuntoData) async {
+    Database db = await database;
+    return await db.insert('conjunto_equip', conjuntoData);
+  }
+
+  Future<int> insertPontos(Map<String, dynamic> pontosData) async {
+    Database db = await database;
+    return await db.insert('pontos', pontosData);
+  }
+
   Future<List<Map<String, dynamic>>> getPlanosLub() async {
     Database db = await database;
     return await db.query('planolub');
@@ -94,6 +149,14 @@ class DatabaseHelper {
     } else {
       return null;
     }
+  }
+
+  // Em DatabaseHelper
+  Future<List<Map<String, dynamic>>> getTagsMaquinasEConjuntos() async {
+    Database db = await database;
+    List<Map<String, dynamic>> tagsMaquinas = await db.query('tag_maquina');
+    // Aqui você também pode buscar os conjuntos de equipamentos associados a cada tag, se necessário
+    return tagsMaquinas;
   }
 
   Future<List<Map<String, dynamic>>> getAreasByPlanoId(int planoId) async {
@@ -124,6 +187,39 @@ class DatabaseHelper {
       whereArgs: [subareaId],
     );
     return linhasResult;
+  }
+
+  Future<List<Map<String, dynamic>>> getTagsAndMaquinasByLinhaId(
+      int linhaId) async {
+    final db = await database;
+    final List<Map<String, dynamic>> tags = await db.query(
+      'tag_maquina',
+      where: 'linha_id = ?',
+      whereArgs: [linhaId],
+    );
+    return tags;
+  }
+
+  Future<List<Map<String, dynamic>>> getConjuntoEquipByTagMaquinaId(
+      int tagMaquinaId) async {
+    final db = await database;
+    final List<Map<String, dynamic>> conjuntoEquip = await db.query(
+      'conjunto_equip',
+      where: 'tag_maquina_id = ?',
+      whereArgs: [tagMaquinaId],
+    );
+    return conjuntoEquip;
+  }
+
+  Future<List<Map<String, dynamic>>> getPontosByConjuntoEquipId(
+      int conjuntoEquipId) async {
+    final db = await database;
+    final List<Map<String, dynamic>> pontos = await db.query(
+      'pontos',
+      where: 'conjunto_equip_id = ?',
+      whereArgs: [conjuntoEquipId],
+    );
+    return pontos;
   }
 
   Future<void> excluirArea(int areaId) async {

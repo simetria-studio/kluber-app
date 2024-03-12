@@ -3,8 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:kluber/class/color_config.dart';
 import 'package:kluber/db/database.dart';
 import 'package:kluber/pages/planos_lub/cad_area.dart';
+import 'package:kluber/pages/planos_lub/cad_conjunto_equip.dart';
 import 'package:kluber/pages/planos_lub/cad_linha.dart';
+import 'package:kluber/pages/planos_lub/cad_pontos.dart';
 import 'package:kluber/pages/planos_lub/cad_subarea.dart';
+import 'package:kluber/pages/planos_lub/cad_tag_motor.dart';
 import 'package:kluber/pages/planos_lub/edit_area.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:flutter_treeview/flutter_treeview.dart';
@@ -54,6 +57,31 @@ class _AreaState extends State<Arvore> {
     _carregarDados();
   }
 
+  Future<void> duplicarTagEMaquina(int tagMaquinaId) async {
+    final Database db = await databaseHelper.database;
+    // Passo 2.1: Recuperar a tag de máquina original
+    var tagMaquina = await db
+        .query('tag_maquina', where: 'id = ?', whereArgs: [tagMaquinaId]);
+    if (tagMaquina.isNotEmpty) {
+      // Passo 2.2: Duplicar a tag de máquina
+      var novaTagId = await db.insert('tag_maquina', {
+        ...tagMaquina.first,
+        "id": null
+      }); // Remover ID para garantir que um novo seja gerado
+
+      // Passo 2.3: Recuperar e duplicar os conjuntos de equipamentos associados
+      var conjuntos = await db.query('conjunto_equip',
+          where: 'tag_maquina_id = ?', whereArgs: [tagMaquinaId]);
+      for (var conjunto in conjuntos) {
+        await db.insert('conjunto_equip', {
+          ...conjunto,
+          "id": null,
+          "tag_maquina_id": novaTagId
+        }); // Atribuir novaTagId como a tag_maquina_id
+      }
+    }
+  }
+
   Future<void> _excluirArea(int areaId) async {
     // Chama o método para excluir a área do banco de dados
     await databaseHelper.excluirArea(areaId);
@@ -79,25 +107,66 @@ class _AreaState extends State<Arvore> {
       whereArgs: [planoId],
     );
     List<AreaModel> areas = [];
+
     for (var areaData in areasResult) {
       int areaId = areaData['id'];
       List<Map<String, dynamic>> subareasMaps =
           await databaseHelper.getSubareasByAreaId(areaId);
       List<SubareaModel> subareasModels = [];
+
       for (var subareaMap in subareasMaps) {
         List<Map<String, dynamic>> linhasMaps =
             await databaseHelper.getLinhasBySubareaId(subareaMap['id']);
-        List<LinhaModel> linhasModels = linhasMaps
-            .map((linhaMap) =>
-                LinhaModel(id: linhaMap['id'], nome: linhaMap['nome']))
-            .toList();
+        List<LinhaModel> linhasModels = [];
+
+        for (var linhaMap in linhasMaps) {
+          List<Map<String, dynamic>> tagsMaquinasData =
+              await databaseHelper.getTagsAndMaquinasByLinhaId(linhaMap['id']);
+
+          // Dentro do loop que itera sobre as tags e máquinas
+          List<TagMaquina> tagsMaquinas =
+              await Future.wait(tagsMaquinasData.map((item) async {
+            List<Map<String, dynamic>> conjEquipData =
+                await databaseHelper.getConjuntoEquipByTagMaquinaId(item['id']);
+            List<ConjuntoEquipModel> conjuntosEquip =
+                await Future.wait(conjEquipData.map((conjEquip) async {
+              List<Map<String, dynamic>> pontosData = await databaseHelper
+                  .getPontosByConjuntoEquipId(conjEquip['id']);
+              List<PontoLubModel> pontos = pontosData
+                  .map((ponto) => PontoLubModel.fromMap(ponto))
+                  .toList();
+
+              return ConjuntoEquipModel(
+                id: conjEquip['id'],
+                conjNome: conjEquip['conj_nome'],
+                equiNome: conjEquip['equi_nome'],
+                pontosLub: pontos,
+              );
+            }).toList());
+
+            return TagMaquina(
+              tagNome: item['tag_nome'],
+              maquinaNome: item['maquina_nome'],
+              conjuntosEquip: conjuntosEquip,
+            );
+          }).toList());
+
+          linhasModels.add(LinhaModel(
+            id: linhaMap['id'],
+            nome: linhaMap['nome'],
+            tagsMaquinas: tagsMaquinas,
+            isVisible: true,
+          ));
+        }
 
         subareasModels.add(SubareaModel(
           id: subareaMap['id'],
           nome: subareaMap['nome'],
           linhas: linhasModels,
+          isVisible: true,
         ));
       }
+
       areas.add(AreaModel(
         id: areaId,
         nome: areaData['nome'],
@@ -105,6 +174,7 @@ class _AreaState extends State<Arvore> {
         isVisible: false,
       ));
     }
+
     return areas;
   }
 
@@ -665,11 +735,19 @@ class _AreaState extends State<Arvore> {
                                                                             10),
                                                               ),
                                                               child: IconButton(
-                                                                onPressed:
-                                                                    () {},
-                                                                icon: const Icon(
-                                                                    Icons
-                                                                        .visibility_off),
+                                                                onPressed: () {
+                                                                  setState(() {
+                                                                    linha.isVisible =
+                                                                        !linha
+                                                                            .isVisible; // Alterna o estado de visibilidade
+                                                                  });
+                                                                },
+                                                                icon: Icon(linha
+                                                                        .isVisible
+                                                                    ? Icons
+                                                                        .visibility_off
+                                                                    : Icons
+                                                                        .visibility),
                                                               ),
                                                             ),
                                                             Container(
@@ -712,9 +790,9 @@ class _AreaState extends State<Arvore> {
                                                                                   Navigator.push(
                                                                                     context,
                                                                                     MaterialPageRoute(
-                                                                                      builder: (context) => CadLinha(
-                                                                                          subAreaId: subarea.id, // Alteração aqui
-                                                                                          idPlano: id),
+                                                                                      builder: (context) => CadTagMotor(
+                                                                                          linhaId: linha.id, // Alteração aqui
+                                                                                          planoId: id),
                                                                                     ),
                                                                                   );
                                                                                 },
@@ -788,7 +866,510 @@ class _AreaState extends State<Arvore> {
                                                     ),
                                                   ],
                                                 ),
-                                              ), // Aqui você acessa `nome` diretamente
+                                              ),
+                                              if (linha.isVisible &&
+                                                  subarea.linhas.isNotEmpty)
+                                                ...linha.tagsMaquinas
+                                                    .map(
+                                                      (tagMaquina) => Column(
+                                                        children: [
+                                                          Container(
+                                                            width:
+                                                                double.infinity,
+                                                            margin:
+                                                                const EdgeInsets
+                                                                    .only(
+                                                                    left: 80,
+                                                                    top: 8),
+                                                            decoration:
+                                                                BoxDecoration(
+                                                              border:
+                                                                  const Border(
+                                                                bottom:
+                                                                    BorderSide(
+                                                                  color:
+                                                                      ColorConfig
+                                                                          .preto,
+                                                                ),
+                                                                left:
+                                                                    BorderSide(
+                                                                  color:
+                                                                      ColorConfig
+                                                                          .preto,
+                                                                ),
+                                                                top: BorderSide(
+                                                                  color:
+                                                                      ColorConfig
+                                                                          .preto,
+                                                                ),
+                                                              ),
+                                                              borderRadius:
+                                                                  BorderRadius
+                                                                      .circular(
+                                                                          10),
+                                                            ),
+                                                            child: Column(
+                                                              mainAxisAlignment:
+                                                                  MainAxisAlignment
+                                                                      .start,
+                                                              crossAxisAlignment:
+                                                                  CrossAxisAlignment
+                                                                      .start,
+                                                              children: [
+                                                                Row(
+                                                                  children: [
+                                                                    Expanded(
+                                                                      flex: 2,
+                                                                      child:
+                                                                          Padding(
+                                                                        padding: const EdgeInsets
+                                                                            .all(
+                                                                            4.0),
+                                                                        child:
+                                                                            Column(
+                                                                          mainAxisAlignment:
+                                                                              MainAxisAlignment.start,
+                                                                          crossAxisAlignment:
+                                                                              CrossAxisAlignment.start,
+                                                                          children: [
+                                                                            Text('TAG: ${tagMaquina.tagNome}'),
+                                                                            Text('MAQUINA: ${tagMaquina.maquinaNome}'),
+                                                                          ],
+                                                                        ),
+                                                                      ),
+                                                                    ),
+                                                                    Expanded(
+                                                                      flex: 2,
+                                                                      child:
+                                                                          Container(
+                                                                        child:
+                                                                            Row(
+                                                                          crossAxisAlignment:
+                                                                              CrossAxisAlignment.center,
+                                                                          mainAxisAlignment:
+                                                                              MainAxisAlignment.end,
+                                                                          children: [
+                                                                            Container(
+                                                                              width: 40,
+                                                                              decoration: BoxDecoration(
+                                                                                color: ColorConfig.amarelo,
+                                                                                border: Border.all(
+                                                                                  color: ColorConfig.preto,
+                                                                                ),
+                                                                                borderRadius: BorderRadius.circular(10),
+                                                                              ),
+                                                                              child: IconButton(
+                                                                                onPressed: () {},
+                                                                                icon: const Icon(Icons.visibility_off),
+                                                                              ),
+                                                                            ),
+                                                                            Container(
+                                                                              width: 40,
+                                                                              decoration: BoxDecoration(
+                                                                                color: ColorConfig.amarelo,
+                                                                                border: Border.all(
+                                                                                  color: ColorConfig.preto,
+                                                                                ),
+                                                                                borderRadius: BorderRadius.circular(10),
+                                                                              ),
+                                                                              child: IconButton(
+                                                                                onPressed: () {
+                                                                                  showDialog(
+                                                                                    context: context,
+                                                                                    builder: (BuildContext context) {
+                                                                                      // Retorna um AlertDialog ou um Widget personalizado
+                                                                                      return AlertDialog(
+                                                                                        title: const Text('Ações'),
+                                                                                        content: SingleChildScrollView(
+                                                                                          child: ListBody(
+                                                                                            children: [
+                                                                                              ElevatedButton(
+                                                                                                onPressed: () {
+                                                                                                  Navigator.push(
+                                                                                                    context,
+                                                                                                    MaterialPageRoute(
+                                                                                                      builder: (context) => CadConjEqui(
+                                                                                                          motorId: linha.id, // Alteração aqui
+                                                                                                          planoId: id),
+                                                                                                    ),
+                                                                                                  );
+                                                                                                },
+                                                                                                style: ElevatedButton.styleFrom(
+                                                                                                  backgroundColor: ColorConfig.amarelo,
+                                                                                                ),
+                                                                                                child: const Text(
+                                                                                                  'Cadastrar Conjun. Equip.',
+                                                                                                  style: TextStyle(color: Colors.black),
+                                                                                                ),
+                                                                                              ),
+                                                                                              ElevatedButton(
+                                                                                                onPressed: () async {
+                                                                                                  await duplicarTagEMaquina(linha.id); // Supondo que este método já esteja implementado e funcione corretamente
+
+                                                                                                  setState(() async {
+                                                                                                    await _carregarDados(); // Isso recarrega todos os dados e atualiza a UI
+
+                                                                                                    // Isso vai forçar a reconstrução do widget com os dados atualizados.
+                                                                                                  });
+                                                                                                },
+
+                                                                                                child: const Text(
+                                                                                                  'Duplicar',
+                                                                                                  style: TextStyle(color: Colors.black),
+                                                                                                ),
+                                                                                                // Resto do código do botão...
+                                                                                              ),
+                                                                                              ElevatedButton(
+                                                                                                onPressed: () {
+                                                                                                  Navigator.push(
+                                                                                                    context,
+                                                                                                    MaterialPageRoute(
+                                                                                                      builder: (context) => CadConjEqui(
+                                                                                                          motorId: linha.id, // Alteração aqui
+                                                                                                          planoId: id),
+                                                                                                    ),
+                                                                                                  );
+                                                                                                },
+                                                                                                style: ElevatedButton.styleFrom(
+                                                                                                  backgroundColor: ColorConfig.amarelo,
+                                                                                                ),
+                                                                                                child: const Text(
+                                                                                                  'Copiar',
+                                                                                                  style: TextStyle(color: Colors.black),
+                                                                                                ),
+                                                                                              ),
+                                                                                              ElevatedButton(
+                                                                                                onPressed: () async {
+                                                                                                  // Substitua `context` e `suaAreaId` pelos valores apropriados
+                                                                                                  final novosDados = await Navigator.push(
+                                                                                                    context,
+                                                                                                    MaterialPageRoute(
+                                                                                                      builder: (context) => EditArea(
+                                                                                                        areaId: areas[index].id, // Alteração aqui
+                                                                                                      ),
+                                                                                                    ),
+                                                                                                  );
+
+                                                                                                  // Verifica se novosDados não é nulo
+                                                                                                  if (novosDados != null) {
+                                                                                                    // Aqui você chama o método para atualizar os dados no banco
+                                                                                                    await databaseHelper.editarArea(novosDados);
+                                                                                                    // Atualiza a lista de áreas
+                                                                                                    _atualizarArea(novosDados);
+                                                                                                  }
+                                                                                                },
+                                                                                                child: const Text('Editar Linha', style: TextStyle(color: Colors.black)),
+                                                                                              ),
+                                                                                              ElevatedButton(
+                                                                                                onPressed: () {
+                                                                                                  _excluirArea(areas[index].id); // Chama o método de exclusão
+                                                                                                  Navigator.of(context).pop(); // Fecha o AlertDialog
+                                                                                                },
+                                                                                                style: ElevatedButton.styleFrom(
+                                                                                                  backgroundColor: Colors.black,
+                                                                                                ),
+                                                                                                child: const Text(
+                                                                                                  'Deletar',
+                                                                                                  style: TextStyle(color: Colors.white),
+                                                                                                ),
+                                                                                              ),
+                                                                                            ],
+                                                                                          ),
+                                                                                        ),
+                                                                                        actions: <Widget>[
+                                                                                          TextButton(
+                                                                                            child: const Text('Fechar', style: TextStyle(color: ColorConfig.preto)),
+                                                                                            onPressed: () {
+                                                                                              Navigator.of(context).pop();
+                                                                                            },
+                                                                                          ),
+                                                                                        ],
+                                                                                      );
+                                                                                    },
+                                                                                  );
+                                                                                },
+                                                                                icon: const Icon(Icons.menu),
+                                                                              ),
+                                                                            ),
+                                                                          ],
+                                                                        ),
+                                                                      ),
+                                                                    ),
+                                                                  ],
+                                                                ),
+                                                              ],
+                                                            ),
+                                                          ),
+                                                          ...tagMaquina
+                                                              .conjuntosEquip
+                                                              .map(
+                                                                  (conjuntoEquip) {
+                                                            return Container(
+                                                              width: double
+                                                                  .infinity,
+                                                              margin:
+                                                                  const EdgeInsets
+                                                                      .only(
+                                                                      left: 99,
+                                                                      top: 8),
+                                                              decoration:
+                                                                  BoxDecoration(
+                                                                border:
+                                                                    const Border(
+                                                                  bottom:
+                                                                      BorderSide(
+                                                                    color: ColorConfig
+                                                                        .preto,
+                                                                  ),
+                                                                  left:
+                                                                      BorderSide(
+                                                                    color: ColorConfig
+                                                                        .preto,
+                                                                  ),
+                                                                  right:
+                                                                      BorderSide(
+                                                                    color: ColorConfig
+                                                                        .preto,
+                                                                  ),
+                                                                  top:
+                                                                      BorderSide(
+                                                                    color: ColorConfig
+                                                                        .preto,
+                                                                  ),
+                                                                ),
+                                                                borderRadius:
+                                                                    BorderRadius
+                                                                        .circular(
+                                                                            10),
+                                                              ),
+                                                              child: Column(
+                                                                mainAxisAlignment:
+                                                                    MainAxisAlignment
+                                                                        .start,
+                                                                crossAxisAlignment:
+                                                                    CrossAxisAlignment
+                                                                        .start,
+                                                                children: [
+                                                                  Row(
+                                                                    children: [
+                                                                      Expanded(
+                                                                        flex: 4,
+                                                                        child:
+                                                                            Padding(
+                                                                          padding: const EdgeInsets
+                                                                              .all(
+                                                                              4.0),
+                                                                          child:
+                                                                              Column(
+                                                                            mainAxisAlignment:
+                                                                                MainAxisAlignment.start,
+                                                                            crossAxisAlignment:
+                                                                                CrossAxisAlignment.start,
+                                                                            children: [
+                                                                              Text('CONJUNTO: ${conjuntoEquip.conjNome}'),
+                                                                              Text('EQUIPAMENTO: ${conjuntoEquip.equiNome}'),
+                                                                            ],
+                                                                          ),
+                                                                        ),
+                                                                      ),
+                                                                      Expanded(
+                                                                        flex: 1,
+                                                                        child:
+                                                                            Container(
+                                                                          width:
+                                                                              20,
+                                                                          decoration:
+                                                                              BoxDecoration(
+                                                                            color:
+                                                                                ColorConfig.amarelo,
+                                                                            border:
+                                                                                Border.all(
+                                                                              color: ColorConfig.preto,
+                                                                            ),
+                                                                            borderRadius:
+                                                                                BorderRadius.circular(10),
+                                                                          ),
+                                                                          child:
+                                                                              IconButton(
+                                                                            onPressed:
+                                                                                () {
+                                                                              showDialog(
+                                                                                context: context,
+                                                                                builder: (BuildContext context) {
+                                                                                  // Retorna um AlertDialog ou um Widget personalizado
+                                                                                  return AlertDialog(
+                                                                                    title: const Text('Ações'),
+                                                                                    content: SingleChildScrollView(
+                                                                                      child: ListBody(
+                                                                                        children: [
+                                                                                          ElevatedButton(
+                                                                                            onPressed: () {
+                                                                                              Navigator.push(
+                                                                                                context,
+                                                                                                MaterialPageRoute(
+                                                                                                  builder: (context) => CadPontos(
+                                                                                                      conjuntoId: conjuntoEquip.id, // Alteração aqui
+                                                                                                      idPlano: id),
+                                                                                                ),
+                                                                                              );
+                                                                                            },
+                                                                                            style: ElevatedButton.styleFrom(
+                                                                                              backgroundColor: ColorConfig.amarelo,
+                                                                                            ),
+                                                                                            child: const Text(
+                                                                                              'Cadastrar Pontos de Lubrificação',
+                                                                                              style: TextStyle(color: Colors.black),
+                                                                                            ),
+                                                                                          ),
+                                                                                          ElevatedButton(
+                                                                                            onPressed: () async {
+                                                                                              await duplicarTagEMaquina(linha.id); // Supondo que este método já esteja implementado e funcione corretamente
+
+                                                                                              setState(() async {
+                                                                                                await _carregarDados(); // Isso recarrega todos os dados e atualiza a UI
+
+                                                                                                // Isso vai forçar a reconstrução do widget com os dados atualizados.
+                                                                                              });
+                                                                                            },
+
+                                                                                            child: const Text(
+                                                                                              'Duplicar',
+                                                                                              style: TextStyle(color: Colors.black),
+                                                                                            ),
+                                                                                            // Resto do código do botão...
+                                                                                          ),
+                                                                                          ElevatedButton(
+                                                                                            onPressed: () {
+                                                                                              Navigator.push(
+                                                                                                context,
+                                                                                                MaterialPageRoute(
+                                                                                                  builder: (context) => CadConjEqui(
+                                                                                                      motorId: linha.id, // Alteração aqui
+                                                                                                      planoId: id),
+                                                                                                ),
+                                                                                              );
+                                                                                            },
+                                                                                            style: ElevatedButton.styleFrom(
+                                                                                              backgroundColor: ColorConfig.amarelo,
+                                                                                            ),
+                                                                                            child: const Text(
+                                                                                              'Copiar',
+                                                                                              style: TextStyle(color: Colors.black),
+                                                                                            ),
+                                                                                          ),
+                                                                                          ElevatedButton(
+                                                                                            onPressed: () async {
+                                                                                              // Substitua `context` e `suaAreaId` pelos valores apropriados
+                                                                                              final novosDados = await Navigator.push(
+                                                                                                context,
+                                                                                                MaterialPageRoute(
+                                                                                                  builder: (context) => EditArea(
+                                                                                                    areaId: areas[index].id, // Alteração aqui
+                                                                                                  ),
+                                                                                                ),
+                                                                                              );
+
+                                                                                              // Verifica se novosDados não é nulo
+                                                                                              if (novosDados != null) {
+                                                                                                // Aqui você chama o método para atualizar os dados no banco
+                                                                                                await databaseHelper.editarArea(novosDados);
+                                                                                                // Atualiza a lista de áreas
+                                                                                                _atualizarArea(novosDados);
+                                                                                              }
+                                                                                            },
+                                                                                            child: const Text('Editar Linha', style: TextStyle(color: Colors.black)),
+                                                                                          ),
+                                                                                          ElevatedButton(
+                                                                                            onPressed: () {
+                                                                                              _excluirArea(areas[index].id); // Chama o método de exclusão
+                                                                                              Navigator.of(context).pop(); // Fecha o AlertDialog
+                                                                                            },
+                                                                                            style: ElevatedButton.styleFrom(
+                                                                                              backgroundColor: Colors.black,
+                                                                                            ),
+                                                                                            child: const Text(
+                                                                                              'Deletar',
+                                                                                              style: TextStyle(color: Colors.white),
+                                                                                            ),
+                                                                                          ),
+                                                                                        ],
+                                                                                      ),
+                                                                                    ),
+                                                                                    actions: <Widget>[
+                                                                                      TextButton(
+                                                                                        child: const Text('Fechar', style: TextStyle(color: ColorConfig.preto)),
+                                                                                        onPressed: () {
+                                                                                          Navigator.of(context).pop();
+                                                                                        },
+                                                                                      ),
+                                                                                    ],
+                                                                                  );
+                                                                                },
+                                                                              );
+                                                                            },
+                                                                            icon:
+                                                                                const Icon(Icons.menu),
+                                                                          ),
+                                                                        ),
+                                                                      ),
+                                                                    ],
+                                                                  ),
+                                                                  ...conjuntoEquip
+                                                                      .pontosLub
+                                                                      .map(
+                                                                          (ponto) {
+                                                                    return ListTile(
+                                                                      title: Text(
+                                                                          "Ponto: ${ponto.componentName}"),
+                                                                    );
+                                                                  }).toList(),
+                                                                ],
+                                                              ),
+                                                            );
+                                                          }).toList(),
+                                                        ],
+                                                      ),
+                                                    )
+                                                    .toList(),
+                                              Container(
+                                                width: double.infinity,
+                                                margin: const EdgeInsets.only(
+                                                    left: 80, top: 8),
+                                                child: ElevatedButton(
+                                                    style: ButtonStyle(
+                                                      backgroundColor:
+                                                          MaterialStateProperty
+                                                              .all(ColorConfig
+                                                                  .amarelo),
+                                                      shape: MaterialStateProperty
+                                                          .all<
+                                                              RoundedRectangleBorder>(
+                                                        RoundedRectangleBorder(
+                                                          borderRadius:
+                                                              BorderRadius
+                                                                  .circular(10),
+                                                        ),
+                                                      ),
+                                                    ),
+                                                    child: const Text(
+                                                      'Cadastrar TAG e MOTOR',
+                                                      style: TextStyle(
+                                                          color: ColorConfig
+                                                              .preto),
+                                                    ),
+                                                    onPressed: () {
+                                                      Navigator.push(
+                                                        context,
+                                                        MaterialPageRoute(
+                                                          builder: (context) =>
+                                                              CadTagMotor(
+                                                                  linhaId: linha
+                                                                      .id, // Alteração aqui
+                                                                  planoId: id),
+                                                        ),
+                                                      );
+                                                    }),
+                                              ),
                                             ],
                                           ),
                                         )
@@ -841,9 +1422,67 @@ class SubareaModel {
 class LinhaModel {
   final int id;
   final String nome;
+  bool isVisible;
+  final List<TagMaquina> tagsMaquinas;
+  final List<ConjuntoEquipModel> conjuntosEquip; // Adicione esta linha
 
   LinhaModel({
     required this.id,
     required this.nome,
+    required this.tagsMaquinas,
+    this.isVisible = true,
+    this.conjuntosEquip = const [], // Adicione esta linha
   });
+}
+
+class TagMaquina {
+  final String tagNome;
+  final String maquinaNome;
+  final List<ConjuntoEquipModel>
+      conjuntosEquip; // Adicione esta lista ao modelo
+
+  TagMaquina({
+    required this.tagNome,
+    required this.maquinaNome,
+    required this.conjuntosEquip, // Inclua no construtor
+  });
+}
+
+class ConjuntoEquipModel {
+  final int id;
+  final String conjNome;
+  final String equiNome;
+  List<PontoLubModel> pontosLub;
+
+  ConjuntoEquipModel({
+    required this.id,
+    required this.conjNome,
+    required this.equiNome,
+    this.pontosLub = const [],
+  });
+}
+
+class PontoLubModel {
+  final int id;
+  final String componentName;
+  final String componentCodigo;
+  // Adicione outros campos conforme necessário
+
+  PontoLubModel({
+    required this.id,
+    required this.componentName,
+    required this.componentCodigo,
+    // Inicialize outros campos aqui
+  });
+
+  // Método para criar um PontoLubModel a partir de um Map.
+  // Adapte os campos conforme necessário para corresponder à sua tabela 'pontos'
+  factory PontoLubModel.fromMap(Map<String, dynamic> map) {
+    return PontoLubModel(
+      id: map['id'],
+      componentName: map['component_name'],
+      componentCodigo: map['component_codigo'],
+      // Atribua outros campos aqui
+    );
+  }
 }

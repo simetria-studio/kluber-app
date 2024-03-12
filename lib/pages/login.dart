@@ -16,6 +16,7 @@ class _LoginPageState extends State<LoginPage> {
   final _formKey = GlobalKey<FormState>();
   final _usuarioController = TextEditingController();
   final _senhaController = TextEditingController();
+  bool _isObscure = true;
 
   Future<void> _login() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -78,10 +79,10 @@ class _LoginPageState extends State<LoginPage> {
         child: Column(
           children: [
             Container(
-              color: Color(0xFFFABA00),
+              color: const Color(0xFFFABA00),
               width: double.infinity,
               height: 100,
-              child: Column(
+              child: const Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
@@ -105,14 +106,14 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                   ]),
             ),
-            SizedBox(height: 40),
+            const SizedBox(height: 40),
             Form(
               key: _formKey,
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: <Widget>[
                   Image.asset('assets/logo.png'),
-                  SizedBox(height: 20),
+                  const SizedBox(height: 20),
                   Container(
                     margin: const EdgeInsets.only(
                         top: 35.0, left: 16.0, right: 16.0),
@@ -126,6 +127,10 @@ class _LoginPageState extends State<LoginPage> {
                             child: TextFormField(
                               controller: _usuarioController,
                               keyboardType: TextInputType.text,
+                              style: const TextStyle(
+                                // Definindo o estilo do texto
+                                color: Colors.white, // Cor do texto
+                              ),
                               decoration: const InputDecoration(
                                 border: OutlineInputBorder(),
                                 focusedBorder: OutlineInputBorder(
@@ -143,6 +148,10 @@ class _LoginPageState extends State<LoginPage> {
                           Padding(
                             padding: const EdgeInsets.all(8.0),
                             child: TextFormField(
+                              style: const TextStyle(
+                                // Definindo o estilo do texto
+                                color: Colors.white, // Cor do texto
+                              ),
                               controller: _senhaController,
                               keyboardType: TextInputType.text,
                               validator: (senha) {
@@ -153,18 +162,30 @@ class _LoginPageState extends State<LoginPage> {
                                 }
                                 return null;
                               },
-                              obscureText: true,
-                              decoration: const InputDecoration(
-                                border: OutlineInputBorder(),
-                                focusedBorder: OutlineInputBorder(
+                              obscureText:
+                                  _isObscure, // Define se a senha é oculta ou não
+                              decoration: InputDecoration(
+                                border: const OutlineInputBorder(),
+                                focusedBorder: const OutlineInputBorder(
                                   borderSide: BorderSide(
                                     color: Color.fromARGB(255, 255, 255, 255),
                                   ),
                                 ),
-                                labelStyle: TextStyle(
+                                labelStyle: const TextStyle(
                                   color: Color.fromARGB(255, 255, 255, 255),
                                 ),
                                 labelText: 'Senha',
+                                suffixIcon: IconButton(
+                                  // Adiciona o IconButton para alternar a visibilidade da senha
+                                  icon: Icon(_isObscure
+                                      ? Icons.visibility
+                                      : Icons.visibility_off),
+                                  onPressed: () {
+                                    setState(() {
+                                      _isObscure = !_isObscure;
+                                    });
+                                  },
+                                ),
                               ),
                             ),
                           ),
@@ -211,7 +232,7 @@ class _LoginPageState extends State<LoginPage> {
                         padding: const EdgeInsets.all(8.0),
                         child: ElevatedButton(
                           style: ElevatedButton.styleFrom(
-                            primary: const Color(0xFFFABA00),
+                            backgroundColor: const Color(0xFFFABA00),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(10),
                             ),
@@ -232,7 +253,7 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                     ),
                   ),
-                  SizedBox(height: 60),
+                  const SizedBox(height: 60),
                   Container(
                     margin: const EdgeInsets.only(top: 40.0),
                     child: Image.asset('assets/logo_rentatec.png'),
