@@ -3,21 +3,18 @@ import 'package:kluber/class/color_config.dart';
 import 'package:kluber/db/database.dart';
 import 'package:kluber/pages/planos_lub/arvore.dart';
 
-class EditArea extends StatefulWidget {
-  final int areaId;
+class EditLinha extends StatefulWidget {
+  final int linhaId;
   final int id;
-
-  const EditArea({Key? key, required this.areaId, required this.id})
-      : super(key: key);
+  const EditLinha({super.key, required this.linhaId, required this.id});
 
   @override
-  State<EditArea> createState() => _EditAreaState();
+  State<EditLinha> createState() => _EditLinhaState();
 }
 
-class _EditAreaState extends State<EditArea> {
+class _EditLinhaState extends State<EditLinha> {
   final DatabaseHelper databaseHelper = DatabaseHelper();
-  late TextEditingController _nomeController;
-
+  final TextEditingController _nomeController = TextEditingController();
   String cliente = '';
   String dataCadastro = '';
   String dataRevisao = '';
@@ -28,7 +25,7 @@ class _EditAreaState extends State<EditArea> {
   @override
   void initState() {
     super.initState();
-    _carregarDadosArea();
+    _carregarDadosSubArea();
     _carregarDadosDoPlano().then((plano) {
       setState(() {
         planoid = plano['id'];
@@ -44,7 +41,7 @@ class _EditAreaState extends State<EditArea> {
   Future<Map<String, dynamic>> _carregarDadosDoPlano() async {
     // Aqui você deve buscar os dados do plano de lubrificação pelo ID
     // Utilize o widget.idPlano para acessar o ID passado como parâmetro
-    var plano = await databaseHelper.getPlanoLubById(widget.id);
+    var plano = await databaseHelper.getLinhaById(widget.id);
     if (plano != null) {
       return plano;
     } else {
@@ -54,14 +51,34 @@ class _EditAreaState extends State<EditArea> {
     }
   }
 
-  Future<void> _carregarDadosArea() async {
-    var areaData = await databaseHelper.getAreaById(widget.areaId);
+  Future<void> _carregarDadosSubArea() async {
+    var areaData = await databaseHelper.getLinhaById(widget.linhaId);
     if (areaData != null) {
       setState(() {
-        _nomeController = TextEditingController(text: areaData['nome']);
+        _nomeController.text = areaData['nome'];
         // Inicialize outros controladores para outros campos, se necessário
       });
     }
+  }
+
+  void _salvarAlteracoes() {
+    final Map<String, dynamic> novosDados = {
+      'id': widget.linhaId,
+      'nome': _nomeController.text,
+      // Adicione mais chaves para outros dados da área, se necessário
+    };
+
+    databaseHelper.editarLinha(novosDados);
+
+    Navigator.push(context, MaterialPageRoute(builder: (context) {
+      return Arvore(idPlano: widget.id);
+    }));
+  }
+
+  @override
+  void dispose() {
+    _nomeController.dispose();
+    super.dispose();
   }
 
   @override
@@ -92,7 +109,7 @@ class _EditAreaState extends State<EditArea> {
                 controller: _nomeController,
                 decoration: const InputDecoration(
                   border: OutlineInputBorder(),
-                  labelText: 'Area: ',
+                  labelText: 'Linha: ',
                 ),
               ),
             ),
@@ -108,25 +125,5 @@ class _EditAreaState extends State<EditArea> {
         ),
       ),
     );
-  }
-
-  void _salvarAlteracoes() {
-    final Map<String, dynamic> novosDados = {
-      'id': widget.areaId,
-      'nome': _nomeController.text,
-      // Adicione mais chaves para outros dados da área, se necessário
-    };
-
-    databaseHelper.editarArea(novosDados);
-
-    Navigator.push(context, MaterialPageRoute(builder: (context) {
-      return Arvore(idPlano: widget.id);
-    }));
-  }
-
-  @override
-  void dispose() {
-    _nomeController.dispose();
-    super.dispose();
   }
 }

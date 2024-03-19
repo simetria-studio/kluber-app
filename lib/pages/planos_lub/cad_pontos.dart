@@ -20,7 +20,6 @@ class CadPontos extends StatefulWidget {
 class _CadPontosState extends State<CadPontos> {
   bool userDataLoaded = false;
   final DatabaseHelper _databaseHelper = DatabaseHelper();
-  final TextEditingController _subareaController = TextEditingController();
   final TextEditingController _componentController = TextEditingController();
   final TextEditingController _componentCodeController =
       TextEditingController();

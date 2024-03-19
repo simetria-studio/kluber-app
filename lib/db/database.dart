@@ -137,10 +137,34 @@ class DatabaseHelper {
     return await db.query('planolub');
   }
 
+  Future<List<Map<String, dynamic>>> getAreas(int idPlano) async {
+    final db = await database;
+    final List<Map<String, dynamic>> areas = await db.query(
+      'area',
+      where: 'plano_id = ?',
+      whereArgs: [idPlano],
+    );
+    return areas;
+  }
+
   Future<Map<String, dynamic>?> getPlanoLubById(int id) async {
     Database db = await database;
     List<Map<String, dynamic>> results = await db.query(
       'planolub',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+    if (results.isNotEmpty) {
+      return results.first;
+    } else {
+      return null;
+    }
+  }
+
+  Future<Map<String, dynamic>?> getPontoById(int id) async {
+    Database db = await database;
+    List<Map<String, dynamic>> results = await db.query(
+      'pontos',
       where: 'id = ?',
       whereArgs: [id],
     );
@@ -254,10 +278,58 @@ class DatabaseHelper {
     }
   }
 
+  Future<Map<String, dynamic>?> getSubAreaById(int subareaId) async {
+    Database db = await database;
+    List<Map<String, dynamic>> results = await db.query(
+      'subarea',
+      where: 'id = ?',
+      whereArgs: [subareaId],
+    );
+    if (results.isNotEmpty) {
+      return results.first;
+    } else {
+      return null;
+    }
+  }
+
+  Future<Map<String, dynamic>?> getLinhaById(int subareaId) async {
+    Database db = await database;
+    List<Map<String, dynamic>> results = await db.query(
+      'linha',
+      where: 'id = ?',
+      whereArgs: [subareaId],
+    );
+    if (results.isNotEmpty) {
+      return results.first;
+    } else {
+      return null;
+    }
+  }
+
   Future<void> editarArea(Map<String, dynamic> areaData) async {
     final db = await database;
     await db.update(
       'area',
+      areaData,
+      where: 'id = ?',
+      whereArgs: [areaData['id']],
+    );
+  }
+
+  Future<void> editarSubArea(Map<String, dynamic> areaData) async {
+    final db = await database;
+    await db.update(
+      'subarea',
+      areaData,
+      where: 'id = ?',
+      whereArgs: [areaData['id']],
+    );
+  }
+
+  Future<void> editarLinha(Map<String, dynamic> areaData) async {
+    final db = await database;
+    await db.update(
+      'linha',
       areaData,
       where: 'id = ?',
       whereArgs: [areaData['id']],

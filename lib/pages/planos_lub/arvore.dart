@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:kluber/class/color_config.dart';
 import 'package:kluber/db/database.dart';
@@ -9,8 +8,10 @@ import 'package:kluber/pages/planos_lub/cad_pontos.dart';
 import 'package:kluber/pages/planos_lub/cad_subarea.dart';
 import 'package:kluber/pages/planos_lub/cad_tag_motor.dart';
 import 'package:kluber/pages/planos_lub/edit_area.dart';
+import 'package:kluber/pages/planos_lub/edit_linha.dart';
+import 'package:kluber/pages/planos_lub/edit_subarea.dart';
+import 'package:kluber/pages/planos_lub/ponto_detail.dart';
 import 'package:sqflite/sqflite.dart';
-import 'package:flutter_treeview/flutter_treeview.dart';
 
 class Arvore extends StatefulWidget {
   final int idPlano;
@@ -23,7 +24,7 @@ class Arvore extends StatefulWidget {
 
 class _AreaState extends State<Arvore> {
   List<AreaModel> areas = []; // Alteração aqui
-  final TreeViewController _controller = TreeViewController(children: []);
+
   String cliente = '';
   String dataCadastro = '';
   String dataRevisao = '';
@@ -31,6 +32,7 @@ class _AreaState extends State<Arvore> {
   String responsavelKluber = '';
   int id = 0;
   final databaseHelper = DatabaseHelper();
+  final DatabaseHelper _databaseHelper = DatabaseHelper();
 
   Future<void> _carregarDados() async {
     var plano = await databaseHelper.getPlanoLubById(widget.idPlano);
@@ -55,6 +57,7 @@ class _AreaState extends State<Arvore> {
   void initState() {
     super.initState();
     _carregarDados();
+    _carregarAreas();
   }
 
   Future<void> duplicarTagEMaquina(int tagMaquinaId) async {
@@ -147,6 +150,7 @@ class _AreaState extends State<Arvore> {
             return TagMaquina(
               tagNome: item['tag_nome'],
               maquinaNome: item['maquina_nome'],
+              id: item['id'],
               conjuntosEquip: conjuntosEquip,
             );
           }).toList());
@@ -176,6 +180,78 @@ class _AreaState extends State<Arvore> {
     }
 
     return areas;
+  }
+
+  final List<Map<String, dynamic>> _areas = [];
+  final List<SubareaModel> _subareas = [];
+  final List<LinhaModel> _linhas = [];
+  AreaModel? _selectedArea;
+  SubareaModel? _selectedSubarea;
+  LinhaModel? _selectedLinha;
+
+  Future<void> _carregarAreas() async {
+    final areas = await _databaseHelper.getAreas(widget.idPlano);
+
+    setState(() {
+      _areas.clear();
+      _areas.addAll(areas);
+      _subareas.clear();
+      // Chame o método para carregar as subáreas (se necessário
+    });
+  }
+
+  Future<void> _carregarSubareas(int areaId) async {
+    try {
+      // Carrega as subáreas correspondentes à área selecionada
+      final List<Map<String, dynamic>> subareasRaw =
+          await _databaseHelper.getSubareasByAreaId(areaId);
+
+      // Convertendo cada mapa em uma instância de SubareaModel
+      final List<SubareaModel> subareas =
+          subareasRaw.map((map) => SubareaModel.fromMap(map)).toList();
+
+      setState(() {
+        _subareas.clear();
+        _subareas.addAll(subareas);
+
+        // Verifica se a lista de subáreas não está vazia
+        if (_subareas.isNotEmpty) {
+          // Atribui a primeira subárea selecionada, se necessário
+          _selectedSubarea = _subareas.first;
+        } else {
+          _selectedSubarea =
+              null; // Garante que _selectedSubarea é nulo se não houver subáreas
+        }
+      });
+    } catch (error) {
+      print('Erro ao carregar subáreas: $error');
+      // Tratamento de erros, como mostrar uma mensagem de erro ao usuário
+    }
+  }
+
+  Future<void> _carregarLinhas(int subareaId) async {
+    // Carrega as linhas correspondentes à subárea selecionada
+    final List<Map<String, dynamic>> linhasRaw =
+        await _databaseHelper.getLinhasBySubareaId(subareaId);
+
+    // Convertendo cada mapa em uma instância de LinhaModel
+    final List<LinhaModel> linhas =
+        linhasRaw.map((map) => LinhaModel.fromMap(map)).toList();
+
+    setState(() {
+      // Atualiza a lista de linhas
+      _linhas.clear();
+      _linhas.addAll(linhas);
+
+      // Verifica se a lista de linhas não está vazia
+      if (_linhas.isNotEmpty) {
+        // Atribui a primeira linha selecionada, se necessário
+        _selectedLinha = _linhas.first;
+      } else {
+        _selectedLinha =
+            null; // Garante que _selectedLinha é nulo se não houver linhas
+      }
+    });
   }
 
   @override
@@ -380,9 +456,11 @@ class _AreaState extends State<Arvore> {
                                                             builder:
                                                                 (context) =>
                                                                     EditArea(
-                                                              areaId: areas[
-                                                                      index]
-                                                                  .id, // Alteração aqui
+                                                              areaId:
+                                                                  areas[index]
+                                                                      .id,
+                                                              id: widget
+                                                                  .idPlano, // Alteração aqui
                                                             ),
                                                           ),
                                                         );
@@ -596,23 +674,15 @@ class _AreaState extends State<Arvore> {
                                                                           ElevatedButton(
                                                                             onPressed:
                                                                                 () async {
-                                                                              // Substitua `context` e `suaAreaId` pelos valores apropriados
-                                                                              final novosDados = await Navigator.push(
+                                                                              await Navigator.push(
                                                                                 context,
                                                                                 MaterialPageRoute(
-                                                                                  builder: (context) => EditArea(
-                                                                                    areaId: areas[index].id, // Alteração aqui
+                                                                                  builder: (context) => EditSubArea(
+                                                                                    subAreaId: subarea.id,
+                                                                                    id: widget.idPlano, // Alteração aqui
                                                                                   ),
                                                                                 ),
                                                                               );
-
-                                                                              // Verifica se novosDados não é nulo
-                                                                              if (novosDados != null) {
-                                                                                // Aqui você chama o método para atualizar os dados no banco
-                                                                                await databaseHelper.editarArea(novosDados);
-                                                                                // Atualiza a lista de áreas
-                                                                                _atualizarArea(novosDados);
-                                                                              }
                                                                             },
                                                                             child:
                                                                                 const Text('Editar Sub Area', style: TextStyle(color: Colors.black)),
@@ -806,25 +876,16 @@ class _AreaState extends State<Arvore> {
                                                                               ),
                                                                               ElevatedButton(
                                                                                 onPressed: () async {
-                                                                                  // Substitua `context` e `suaAreaId` pelos valores apropriados
-                                                                                  final novosDados = await Navigator.push(
+                                                                                  Navigator.push(
                                                                                     context,
                                                                                     MaterialPageRoute(
-                                                                                      builder: (context) => EditArea(
-                                                                                        areaId: areas[index].id, // Alteração aqui
-                                                                                      ),
+                                                                                      builder: (context) => EditLinha(
+                                                                                          linhaId: subarea.id, // Alteração aqui
+                                                                                          id: id),
                                                                                     ),
                                                                                   );
-
-                                                                                  // Verifica se novosDados não é nulo
-                                                                                  if (novosDados != null) {
-                                                                                    // Aqui você chama o método para atualizar os dados no banco
-                                                                                    await databaseHelper.editarArea(novosDados);
-                                                                                    // Atualiza a lista de áreas
-                                                                                    _atualizarArea(novosDados);
-                                                                                  }
                                                                                 },
-                                                                                child: const Text('Editar Linha', style: TextStyle(color: Colors.black)),
+                                                                                child: const Text('Editar', style: TextStyle(color: Colors.black)),
                                                                               ),
                                                                               ElevatedButton(
                                                                                 onPressed: () {
@@ -1021,13 +1082,171 @@ class _AreaState extends State<Arvore> {
                                                                                               ),
                                                                                               ElevatedButton(
                                                                                                 onPressed: () {
-                                                                                                  Navigator.push(
-                                                                                                    context,
-                                                                                                    MaterialPageRoute(
-                                                                                                      builder: (context) => CadConjEqui(
-                                                                                                          motorId: linha.id, // Alteração aqui
-                                                                                                          planoId: id),
-                                                                                                    ),
+                                                                                                  showDialog(
+                                                                                                    context: context,
+                                                                                                    builder: (BuildContext context) {
+                                                                                                      // Criação de uma variável de estado local para o diálogo
+                                                                                                      String? selectedAreaId;
+                                                                                                      String? selectedSubareaId;
+                                                                                                      String? selectedLinhaId;
+
+                                                                                                      return StatefulBuilder(
+                                                                                                        // Adiciona um StatefulBuilder para atualizar o estado dentro do AlertDialog
+                                                                                                        builder: (context, setState) {
+                                                                                                          return AlertDialog(
+                                                                                                            title: const Text('Selecionar Área, Subárea e Linha'),
+                                                                                                            content: Column(
+                                                                                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                                                                                              mainAxisSize: MainAxisSize.min,
+                                                                                                              children: [
+                                                                                                                Container(
+                                                                                                                  width: double.infinity,
+                                                                                                                  padding: const EdgeInsets.all(5),
+                                                                                                                  child: DropdownButton<String>(
+                                                                                                                    hint: const Text('Selecione a área'),
+                                                                                                                    value: selectedAreaId,
+                                                                                                                    onChanged: (newValue) {
+                                                                                                                      setState(() {
+                                                                                                                        selectedAreaId = newValue;
+                                                                                                                        _carregarSubareas(int.parse(newValue!));
+                                                                                                                      });
+                                                                                                                    },
+                                                                                                                    items: _areas.map<DropdownMenuItem<String>>((Map<String, dynamic> area) {
+                                                                                                                      return DropdownMenuItem<String>(
+                                                                                                                        value: area['id'].toString(),
+                                                                                                                        child: Text(area['nome']),
+                                                                                                                      );
+                                                                                                                    }).toList(),
+                                                                                                                  ),
+                                                                                                                ),
+                                                                                                                Container(
+                                                                                                                  width: double.infinity,
+                                                                                                                  padding: const EdgeInsets.all(5),
+                                                                                                                  child: DropdownButton<String>(
+                                                                                                                    hint: const Text('Selecione a subárea'),
+                                                                                                                    value: selectedSubareaId,
+                                                                                                                    onChanged: _subareas.isNotEmpty
+                                                                                                                        ? (newValue) {
+                                                                                                                            setState(() {
+                                                                                                                              selectedSubareaId = newValue;
+                                                                                                                              _carregarLinhas(int.parse(newValue!));
+                                                                                                                            });
+                                                                                                                          }
+                                                                                                                        : null,
+                                                                                                                    items: _subareas.map<DropdownMenuItem<String>>((SubareaModel subarea) {
+                                                                                                                      return DropdownMenuItem<String>(
+                                                                                                                        value: subarea.id.toString(), // Asume-se que 'id' é numérico e precisa ser convertido para String
+                                                                                                                        child: Text(subarea.nome),
+                                                                                                                      );
+                                                                                                                    }).toList(),
+                                                                                                                  ),
+                                                                                                                ),
+                                                                                                                Container(
+                                                                                                                  width: double.infinity,
+                                                                                                                  padding: const EdgeInsets.all(5),
+                                                                                                                  child: DropdownButton<String>(
+                                                                                                                    hint: const Text('Selecione a linha'),
+                                                                                                                    value: selectedLinhaId,
+                                                                                                                    onChanged: _linhas.isNotEmpty
+                                                                                                                        ? (newValue) {
+                                                                                                                            setState(() {
+                                                                                                                              selectedLinhaId = newValue;
+                                                                                                                              // Certifique-se de que 'id' é uma String ou converta-a conforme necessário
+                                                                                                                            });
+                                                                                                                          }
+                                                                                                                        : null,
+                                                                                                                    items: _linhas.map<DropdownMenuItem<String>>((LinhaModel linha) {
+                                                                                                                      return DropdownMenuItem<String>(
+                                                                                                                        value: linha.id.toString(), // Asume-se que 'id' é numérico e precisa ser convertido para String
+                                                                                                                        child: Text(linha.nome),
+                                                                                                                      );
+                                                                                                                    }).toList(),
+                                                                                                                  ),
+                                                                                                                ),
+                                                                                                                ElevatedButton(
+                                                                                                                  onPressed: () async {
+                                                                                                                    // Copiar tag_maquina
+                                                                                                                    Map<String, dynamic> novaTagMaquinaData = {
+                                                                                                                      'tag_nome': tagMaquina.tagNome,
+                                                                                                                      'maquina_nome': tagMaquina.maquinaNome,
+                                                                                                                      'linha_id': selectedLinhaId,
+                                                                                                                    };
+
+                                                                                                                    final int novaTagMaquinaId = await databaseHelper.insertTag(novaTagMaquinaData);
+
+                                                                                                                    if (novaTagMaquinaId > 0) {
+                                                                                                                      // Verificar se existem conjuntos_equip associados à tag_maquina original
+                                                                                                                      final List<Map<String, dynamic>> conjuntosExistentes = await databaseHelper.getConjuntoEquipByTagMaquinaId(tagMaquina.id); // Presumindo que tagMaquina.id é o ID da tag original
+
+                                                                                                                      if (conjuntosExistentes.isNotEmpty) {
+                                                                                                                        // Para cada conjunto_equip existente, criar uma cópia para a nova tag_maquina
+                                                                                                                        for (var conjunto in conjuntosExistentes) {
+                                                                                                                          Map<String, dynamic> novoConjuntoEquipData = {
+                                                                                                                            'conj_nome': conjunto['conj_nome'],
+                                                                                                                            'equi_nome': conjunto['equi_nome'],
+                                                                                                                            'tag_maquina_id': novaTagMaquinaId,
+                                                                                                                          };
+
+                                                                                                                          final int novoConjuntoEquipId = await databaseHelper.insertConjuntoAndEquip(novoConjuntoEquipData);
+
+                                                                                                                          if (novoConjuntoEquipId <= 0) {
+                                                                                                                            // Trate o erro de inserção de cada conjunto_equip
+                                                                                                                            ScaffoldMessenger.of(context).showSnackBar(
+                                                                                                                              const SnackBar(content: Text('Erro ao criar cópia de conjunto e equipamento.')),
+                                                                                                                            );
+                                                                                                                            Navigator.of(context).pop();
+                                                                                                                            // Considerar se deseja interromper o loop ou continuar tentando os demais conjuntos
+                                                                                                                          }
+                                                                                                                        }
+                                                                                                                        setState(() async {
+                                                                                                                          await _carregarDados();
+                                                                                                                        });
+
+                                                                                                                        ScaffoldMessenger.of(context).showSnackBar(
+                                                                                                                          const SnackBar(content: Text('Todas as cópias de conjunto e equipamento criadas com sucesso.')),
+                                                                                                                        );
+                                                                                                                        Navigator.of(context).pop();
+                                                                                                                      } else {
+                                                                                                                        setState(() async {
+                                                                                                                          await _carregarDados();
+                                                                                                                        });
+
+                                                                                                                        ScaffoldMessenger.of(context).showSnackBar(
+                                                                                                                          const SnackBar(content: Text('Copiado sem conjunto')),
+                                                                                                                        );
+                                                                                                                        Navigator.of(context).pop();
+                                                                                                                      }
+                                                                                                                    } else {
+                                                                                                                      // Tratar erro de inserção da tag_maquina
+                                                                                                                      ScaffoldMessenger.of(context).showSnackBar(
+                                                                                                                        const SnackBar(content: Text('Erro ao criar nova tag_maquina.')),
+                                                                                                                      );
+                                                                                                                      Navigator.of(context).pop();
+                                                                                                                    }
+                                                                                                                  },
+                                                                                                                  style: ElevatedButton.styleFrom(
+                                                                                                                    backgroundColor: ColorConfig.amarelo, // Substitua conforme necessário
+                                                                                                                  ),
+                                                                                                                  child: const Text(
+                                                                                                                    'Copiar',
+                                                                                                                    style: TextStyle(color: Colors.black),
+                                                                                                                  ),
+                                                                                                                ),
+                                                                                                              ],
+                                                                                                            ),
+                                                                                                            actions: <Widget>[
+                                                                                                              TextButton(
+                                                                                                                onPressed: () {
+                                                                                                                  Navigator.of(context).pop();
+                                                                                                                },
+                                                                                                                child: const Text('Fechar'),
+                                                                                                              ),
+                                                                                                              // Adicione outros botões de ação conforme necessário
+                                                                                                            ],
+                                                                                                          );
+                                                                                                        },
+                                                                                                      );
+                                                                                                    },
                                                                                                   );
                                                                                                 },
                                                                                                 style: ElevatedButton.styleFrom(
@@ -1039,26 +1258,8 @@ class _AreaState extends State<Arvore> {
                                                                                                 ),
                                                                                               ),
                                                                                               ElevatedButton(
-                                                                                                onPressed: () async {
-                                                                                                  // Substitua `context` e `suaAreaId` pelos valores apropriados
-                                                                                                  final novosDados = await Navigator.push(
-                                                                                                    context,
-                                                                                                    MaterialPageRoute(
-                                                                                                      builder: (context) => EditArea(
-                                                                                                        areaId: areas[index].id, // Alteração aqui
-                                                                                                      ),
-                                                                                                    ),
-                                                                                                  );
-
-                                                                                                  // Verifica se novosDados não é nulo
-                                                                                                  if (novosDados != null) {
-                                                                                                    // Aqui você chama o método para atualizar os dados no banco
-                                                                                                    await databaseHelper.editarArea(novosDados);
-                                                                                                    // Atualiza a lista de áreas
-                                                                                                    _atualizarArea(novosDados);
-                                                                                                  }
-                                                                                                },
-                                                                                                child: const Text('Editar Linha', style: TextStyle(color: Colors.black)),
+                                                                                                onPressed: () async {},
+                                                                                                child: const Text('Editar', style: TextStyle(color: Colors.black)),
                                                                                               ),
                                                                                               ElevatedButton(
                                                                                                 onPressed: () {
@@ -1222,62 +1423,8 @@ class _AreaState extends State<Arvore> {
                                                                                             ),
                                                                                           ),
                                                                                           ElevatedButton(
-                                                                                            onPressed: () async {
-                                                                                              await duplicarTagEMaquina(linha.id); // Supondo que este método já esteja implementado e funcione corretamente
-
-                                                                                              setState(() async {
-                                                                                                await _carregarDados(); // Isso recarrega todos os dados e atualiza a UI
-
-                                                                                                // Isso vai forçar a reconstrução do widget com os dados atualizados.
-                                                                                              });
-                                                                                            },
-
-                                                                                            child: const Text(
-                                                                                              'Duplicar',
-                                                                                              style: TextStyle(color: Colors.black),
-                                                                                            ),
-                                                                                            // Resto do código do botão...
-                                                                                          ),
-                                                                                          ElevatedButton(
-                                                                                            onPressed: () {
-                                                                                              Navigator.push(
-                                                                                                context,
-                                                                                                MaterialPageRoute(
-                                                                                                  builder: (context) => CadConjEqui(
-                                                                                                      motorId: linha.id, // Alteração aqui
-                                                                                                      planoId: id),
-                                                                                                ),
-                                                                                              );
-                                                                                            },
-                                                                                            style: ElevatedButton.styleFrom(
-                                                                                              backgroundColor: ColorConfig.amarelo,
-                                                                                            ),
-                                                                                            child: const Text(
-                                                                                              'Copiar',
-                                                                                              style: TextStyle(color: Colors.black),
-                                                                                            ),
-                                                                                          ),
-                                                                                          ElevatedButton(
-                                                                                            onPressed: () async {
-                                                                                              // Substitua `context` e `suaAreaId` pelos valores apropriados
-                                                                                              final novosDados = await Navigator.push(
-                                                                                                context,
-                                                                                                MaterialPageRoute(
-                                                                                                  builder: (context) => EditArea(
-                                                                                                    areaId: areas[index].id, // Alteração aqui
-                                                                                                  ),
-                                                                                                ),
-                                                                                              );
-
-                                                                                              // Verifica se novosDados não é nulo
-                                                                                              if (novosDados != null) {
-                                                                                                // Aqui você chama o método para atualizar os dados no banco
-                                                                                                await databaseHelper.editarArea(novosDados);
-                                                                                                // Atualiza a lista de áreas
-                                                                                                _atualizarArea(novosDados);
-                                                                                              }
-                                                                                            },
-                                                                                            child: const Text('Editar Linha', style: TextStyle(color: Colors.black)),
+                                                                                            onPressed: () async {},
+                                                                                            child: const Text('Editar', style: TextStyle(color: Colors.black)),
                                                                                           ),
                                                                                           ElevatedButton(
                                                                                             onPressed: () {
@@ -1318,9 +1465,25 @@ class _AreaState extends State<Arvore> {
                                                                       .pontosLub
                                                                       .map(
                                                                           (ponto) {
-                                                                    return ListTile(
-                                                                      title: Text(
-                                                                          "Ponto: ${ponto.componentName}"),
+                                                                    return Container(
+                                                                      child:
+                                                                          Column(
+                                                                        children: [
+                                                                          TextButton(
+                                                                            child:
+                                                                                Text('Ponto: ${ponto.componentName}', style: const TextStyle(color: ColorConfig.preto)),
+                                                                            onPressed:
+                                                                                () {
+                                                                              Navigator.push(
+                                                                                context,
+                                                                                MaterialPageRoute(
+                                                                                  builder: (context) => PontoDetail(id: ponto.id),
+                                                                                ),
+                                                                              );
+                                                                            },
+                                                                          ),
+                                                                        ],
+                                                                      ),
                                                                     );
                                                                   }).toList(),
                                                                 ],
@@ -1394,7 +1557,7 @@ class _AreaState extends State<Arvore> {
 class AreaModel {
   final int id;
   final String nome;
-  List<SubareaModel> subareas; // Alterado para usar o modelo SubareaModel
+  List<SubareaModel> subareas;
   bool isVisible;
 
   AreaModel({
@@ -1403,20 +1566,41 @@ class AreaModel {
     required this.subareas,
     this.isVisible = false,
   });
+
+  factory AreaModel.fromMap(Map<String, dynamic> map) {
+    return AreaModel(
+      id: map['id'] as int,
+      nome: map['nome'] as String,
+      // A conversão de subáreas depende de como você quer tratar isso,
+      // aqui está um exemplo onde inicializamos vazio já que o map não as contém
+      subareas: [],
+      isVisible:
+          map.containsKey('isVisible') ? map['isVisible'] as bool : false,
+    );
+  }
 }
 
 class SubareaModel {
   final int id;
   final String nome;
   List<LinhaModel> linhas;
-  bool isVisible; // Adicionado para controlar a visibilidade das linhas
+  bool isVisible;
 
   SubareaModel({
     required this.id,
     required this.nome,
     required this.linhas,
-    this.isVisible = true, // As linhas são visíveis por padrão
+    this.isVisible = true,
   });
+
+  factory SubareaModel.fromMap(Map<String, dynamic> map) {
+    return SubareaModel(
+      id: map['id'],
+      nome: map['nome'],
+      linhas: [], // Você precisará adaptar isso se linhas vierem do mapa
+      isVisible: map['isVisible'] ?? true,
+    );
+  }
 }
 
 class LinhaModel {
@@ -1433,18 +1617,31 @@ class LinhaModel {
     this.isVisible = true,
     this.conjuntosEquip = const [], // Adicione esta linha
   });
+
+  factory LinhaModel.fromMap(Map<String, dynamic> map) {
+    return LinhaModel(
+      id: map['id'],
+      nome: map['nome'],
+      isVisible: map['isVisible'] ?? true,
+      tagsMaquinas: [], // Você precisará adaptar isso se tagsMaquinas vierem do mapa
+      conjuntosEquip: [], // Adicione esta linha
+    );
+  }
 }
 
 class TagMaquina {
   final String tagNome;
   final String maquinaNome;
+  final int id;
   final List<ConjuntoEquipModel>
       conjuntosEquip; // Adicione esta lista ao modelo
 
   TagMaquina({
     required this.tagNome,
     required this.maquinaNome,
-    required this.conjuntosEquip, // Inclua no construtor
+    required this.conjuntosEquip,
+    required this.id,
+    // Inclua no construtor
   });
 }
 

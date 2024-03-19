@@ -3,21 +3,18 @@ import 'package:kluber/class/color_config.dart';
 import 'package:kluber/db/database.dart';
 import 'package:kluber/pages/planos_lub/arvore.dart';
 
-class EditArea extends StatefulWidget {
-  final int areaId;
+class EditSubArea extends StatefulWidget {
+  final int subAreaId;
   final int id;
-
-  const EditArea({Key? key, required this.areaId, required this.id})
-      : super(key: key);
+  const EditSubArea({super.key, required this.subAreaId, required this.id});
 
   @override
-  State<EditArea> createState() => _EditAreaState();
+  State<EditSubArea> createState() => _EditSubAreaState();
 }
 
-class _EditAreaState extends State<EditArea> {
+class _EditSubAreaState extends State<EditSubArea> {
   final DatabaseHelper databaseHelper = DatabaseHelper();
-  late TextEditingController _nomeController;
-
+  final TextEditingController _nomeController = TextEditingController();
   String cliente = '';
   String dataCadastro = '';
   String dataRevisao = '';
@@ -28,7 +25,7 @@ class _EditAreaState extends State<EditArea> {
   @override
   void initState() {
     super.initState();
-    _carregarDadosArea();
+    _carregarDadosSubArea();
     _carregarDadosDoPlano().then((plano) {
       setState(() {
         planoid = plano['id'];
@@ -54,14 +51,34 @@ class _EditAreaState extends State<EditArea> {
     }
   }
 
-  Future<void> _carregarDadosArea() async {
-    var areaData = await databaseHelper.getAreaById(widget.areaId);
+  Future<void> _carregarDadosSubArea() async {
+    var areaData = await databaseHelper.getSubAreaById(widget.subAreaId);
     if (areaData != null) {
       setState(() {
-        _nomeController = TextEditingController(text: areaData['nome']);
+        _nomeController.text = areaData['nome'];
         // Inicialize outros controladores para outros campos, se necessário
       });
     }
+  }
+
+  void _salvarAlteracoes() {
+    final Map<String, dynamic> novosDados = {
+      'id': widget.subAreaId,
+      'nome': _nomeController.text,
+      // Adicione mais chaves para outros dados da área, se necessário
+    };
+
+    databaseHelper.editarSubArea(novosDados);
+
+    Navigator.push(context, MaterialPageRoute(builder: (context) {
+      return Arvore(idPlano: widget.id);
+    }));
+  }
+
+  @override
+  void dispose() {
+    _nomeController.dispose();
+    super.dispose();
   }
 
   @override
@@ -108,25 +125,5 @@ class _EditAreaState extends State<EditArea> {
         ),
       ),
     );
-  }
-
-  void _salvarAlteracoes() {
-    final Map<String, dynamic> novosDados = {
-      'id': widget.areaId,
-      'nome': _nomeController.text,
-      // Adicione mais chaves para outros dados da área, se necessário
-    };
-
-    databaseHelper.editarArea(novosDados);
-
-    Navigator.push(context, MaterialPageRoute(builder: (context) {
-      return Arvore(idPlano: widget.id);
-    }));
-  }
-
-  @override
-  void dispose() {
-    _nomeController.dispose();
-    super.dispose();
   }
 }
