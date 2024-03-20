@@ -117,6 +117,7 @@ class _CadPontosState extends State<CadPontos> {
         'period_codigo': periodCodigo,
         'qty_pessoas': qtyPessoas,
         'conjunto_equip_id': conjuntoEquipId,
+        'plano_id': widget.idPlano,
       };
 
       // Insere os dados na base de dados e retorna o ID do plano inserido

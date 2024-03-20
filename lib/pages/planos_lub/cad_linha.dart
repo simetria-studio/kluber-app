@@ -61,6 +61,7 @@ class _CadLinhaState extends State<CadLinha> {
       Map<String, dynamic> linhaCad = {
         'nome': subarea,
         'subarea_id': widget.subAreaId,
+        'plano_id': widget.idPlano,
       };
 
       // Insere os dados na base de dados e retorna o ID do plano inserido

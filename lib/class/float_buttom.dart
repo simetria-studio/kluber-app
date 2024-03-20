@@ -8,46 +8,46 @@ class FloatBtn {
     return FloatingActionButton(
       onPressed: () {
         Navigator.of(context).push(MaterialPageRoute(
-          builder: (context) => CadPlanoLub(),
+          builder: (context) => const CadPlanoLub(),
         ));
       },
-      child: Icon(Icons.add),
       backgroundColor: ColorConfig.amarelo,
-      shape: CircleBorder(),
+      shape: const CircleBorder(),
+      child: const Icon(Icons.add),
     );
   }
 
   static Widget bottomAppBar() {
     return BottomAppBar(
-      shape: CircularNotchedRectangle(),
+      shape: const CircularNotchedRectangle(),
       notchMargin: 4.0,
+      color: ColorConfig.amarelo,
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: <Widget>[
           IconButton(
-            icon: Icon(Icons.home),
+            icon: const Icon(Icons.home),
             onPressed: () {},
             color: ColorConfig.preto,
           ),
           IconButton(
-            icon: Icon(Icons.bar_chart_sharp),
+            icon: const Icon(Icons.bar_chart_sharp),
             onPressed: () {},
             color: ColorConfig.preto,
           ),
-          SizedBox(width: 48), // O espaço para o FloatingActionButton
+          const SizedBox(width: 48), // O espaço para o FloatingActionButton
           IconButton(
-            icon: Icon(Icons.settings),
+            icon: const Icon(Icons.settings),
             onPressed: () {},
             color: ColorConfig.preto,
           ),
           IconButton(
-            icon: Icon(Icons.person),
+            icon: const Icon(Icons.person),
             onPressed: () {},
             color: ColorConfig.preto,
           ),
         ],
       ),
-      color: ColorConfig.amarelo,
     );
   }
 }

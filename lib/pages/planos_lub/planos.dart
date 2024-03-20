@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:kluber/class/color_config.dart';
 import 'package:kluber/class/float_buttom.dart';
 import 'package:kluber/db/database.dart';
+import 'package:kluber/db/sync_db.dart';
 import 'package:kluber/pages/planos_lub/arvore.dart';
 
 class Planos extends StatefulWidget {
@@ -41,7 +42,26 @@ class _PlanosState extends State<Planos> {
           ),
         ),
         backgroundColor: ColorConfig.amarelo,
+        actions: <Widget>[
+          IconButton(
+            icon: const Icon(Icons.sync, color: Colors.black),
+            onPressed: () async {
+              final sincronizador = Sincronizador();
+              final result = await sincronizador.sincronizarDados();
+              if (result) {
+                _loadPlanos();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Dados sincronizados com sucesso!'),
+                    duration: Duration(seconds: 2), // Duração da SnackBar
+                  ),
+                );
+              }
+            },
+          ),
+        ],
       ),
+
       body: SingleChildScrollView(
         child: Column(
           children: [

@@ -59,6 +59,7 @@ class _CadSubAreaState extends State<CadSubArea> {
       Map<String, dynamic> subAreaCad = {
         'nome': subarea,
         'area_id': widget.areaId,
+        'plano_id': widget.idPlano,
       };
 
       // Insere os dados na base de dados e retorna o ID do plano inserido

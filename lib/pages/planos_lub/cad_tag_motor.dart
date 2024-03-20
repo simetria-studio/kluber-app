@@ -63,6 +63,7 @@ class _CadTagMotorState extends State<CadTagMotor> {
         'tag_nome': tag,
         'maquina_nome': motor,
         'linha_id': widget.linhaId,
+        'plano_id': widget.planoId,
       };
 
       // Insere os dados na base de dados e retorna o ID do plano inserido

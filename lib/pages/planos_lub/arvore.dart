@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:kluber/class/color_config.dart';
+import 'package:kluber/class/float_buttom.dart';
 import 'package:kluber/db/database.dart';
 import 'package:kluber/pages/planos_lub/cad_area.dart';
 import 'package:kluber/pages/planos_lub/cad_conjunto_equip.dart';
@@ -8,8 +9,10 @@ import 'package:kluber/pages/planos_lub/cad_pontos.dart';
 import 'package:kluber/pages/planos_lub/cad_subarea.dart';
 import 'package:kluber/pages/planos_lub/cad_tag_motor.dart';
 import 'package:kluber/pages/planos_lub/edit_area.dart';
+import 'package:kluber/pages/planos_lub/edit_conj_equi.dart';
 import 'package:kluber/pages/planos_lub/edit_linha.dart';
 import 'package:kluber/pages/planos_lub/edit_subarea.dart';
+import 'package:kluber/pages/planos_lub/edit_tag_maquina.dart';
 import 'package:kluber/pages/planos_lub/ponto_detail.dart';
 import 'package:sqflite/sqflite.dart';
 
@@ -88,6 +91,34 @@ class _AreaState extends State<Arvore> {
   Future<void> _excluirArea(int areaId) async {
     // Chama o método para excluir a área do banco de dados
     await databaseHelper.excluirArea(areaId);
+    // Atualiza a lista de áreas após a exclusão
+    await _carregarDados();
+  }
+
+  Future<void> _excluirSubArea(int areaId) async {
+    // Chama o método para excluir a área do banco de dados
+    await databaseHelper.excluirSubArea(areaId);
+    // Atualiza a lista de áreas após a exclusão
+    await _carregarDados();
+  }
+
+  Future<void> _excluirLinha(int areaId) async {
+    // Chama o método para excluir a área do banco de dados
+    await databaseHelper.excluirLinhas(areaId);
+    // Atualiza a lista de áreas após a exclusão
+    await _carregarDados();
+  }
+
+  Future<void> _excluirTagEquip(int areaId) async {
+    // Chama o método para excluir a área do banco de dados
+    await databaseHelper.excluirTagEquip(areaId);
+    // Atualiza a lista de áreas após a exclusão
+    await _carregarDados();
+  }
+
+  Future<void> _excluirConEquip(int areaId) async {
+    // Chama o método para excluir a área do banco de dados
+    await databaseHelper.excluirConjEquip(areaId);
     // Atualiza a lista de áreas após a exclusão
     await _carregarDados();
   }
@@ -690,8 +721,8 @@ class _AreaState extends State<Arvore> {
                                                                           ElevatedButton(
                                                                             onPressed:
                                                                                 () {
-                                                                              _excluirArea(areas[index].id); // Chama o método de exclusão
-                                                                              Navigator.of(context).pop(); // Fecha o AlertDialog
+                                                                              _excluirSubArea(subarea.id); // Chama o método de exclusão
+                                                                              Navigator.of(context).pop();
                                                                             },
                                                                             style:
                                                                                 ElevatedButton.styleFrom(
@@ -889,8 +920,8 @@ class _AreaState extends State<Arvore> {
                                                                               ),
                                                                               ElevatedButton(
                                                                                 onPressed: () {
-                                                                                  _excluirArea(areas[index].id); // Chama o método de exclusão
-                                                                                  Navigator.of(context).pop(); // Fecha o AlertDialog
+                                                                                  _excluirLinha(linha.id); // Chama o método de exclusão
+                                                                                  Navigator.of(context).pop();
                                                                                 },
                                                                                 style: ElevatedButton.styleFrom(
                                                                                   backgroundColor: Colors.black,
@@ -1258,13 +1289,22 @@ class _AreaState extends State<Arvore> {
                                                                                                 ),
                                                                                               ),
                                                                                               ElevatedButton(
-                                                                                                onPressed: () async {},
+                                                                                                onPressed: () async {
+                                                                                                  Navigator.push(
+                                                                                                    context,
+                                                                                                    MaterialPageRoute(
+                                                                                                      builder: (context) => EditTagMaquina(
+                                                                                                          tagMaquinaId: tagMaquina.id, // Alteração aqui
+                                                                                                          id: id),
+                                                                                                    ),
+                                                                                                  );
+                                                                                                },
                                                                                                 child: const Text('Editar', style: TextStyle(color: Colors.black)),
                                                                                               ),
                                                                                               ElevatedButton(
                                                                                                 onPressed: () {
-                                                                                                  _excluirArea(areas[index].id); // Chama o método de exclusão
-                                                                                                  Navigator.of(context).pop(); // Fecha o AlertDialog
+                                                                                                  _excluirTagEquip(tagMaquina.id); // Chama o método de exclusão
+                                                                                                  Navigator.of(context).pop();
                                                                                                 },
                                                                                                 style: ElevatedButton.styleFrom(
                                                                                                   backgroundColor: Colors.black,
@@ -1423,13 +1463,22 @@ class _AreaState extends State<Arvore> {
                                                                                             ),
                                                                                           ),
                                                                                           ElevatedButton(
-                                                                                            onPressed: () async {},
+                                                                                            onPressed: () async {
+                                                                                              Navigator.push(
+                                                                                                context,
+                                                                                                MaterialPageRoute(
+                                                                                                  builder: (context) => EditConjEqui(
+                                                                                                      conjEquiId: conjuntoEquip.id, // Alteração aqui
+                                                                                                      id: id),
+                                                                                                ),
+                                                                                              );
+                                                                                            },
                                                                                             child: const Text('Editar', style: TextStyle(color: Colors.black)),
                                                                                           ),
                                                                                           ElevatedButton(
                                                                                             onPressed: () {
-                                                                                              _excluirArea(areas[index].id); // Chama o método de exclusão
-                                                                                              Navigator.of(context).pop(); // Fecha o AlertDialog
+                                                                                              _excluirConEquip(conjuntoEquip.id); // Chama o método de exclusão
+                                                                                              Navigator.of(context).pop();
                                                                                             },
                                                                                             style: ElevatedButton.styleFrom(
                                                                                               backgroundColor: Colors.black,
@@ -1550,6 +1599,11 @@ class _AreaState extends State<Arvore> {
           ],
         ),
       ),
+      floatingActionButton: FloatBtn.build(
+          context), // Chama o FloatingActionButton da classe FloatBtn
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+      bottomNavigationBar:
+          FloatBtn.bottomAppBar(), // Chama o BottomAppBar da classe FloatBtn
     );
   }
 }

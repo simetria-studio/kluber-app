@@ -62,6 +62,7 @@ class _CadConjEquiState extends State<CadConjEqui> {
         'conj_nome': conjunto,
         'equi_nome': equipamento,
         'tag_maquina_id': widget.motorId,
+        'plano_id': widget.planoId,
       };
 
       // Insere os dados na base de dados e retorna o ID do plano inserido

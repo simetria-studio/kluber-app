@@ -7,6 +7,7 @@ import 'package:kluber/class/float_buttom.dart';
 import 'package:http/http.dart' as http;
 // import 'package:intl/intl.dart';
 import 'dart:convert';
+import 'package:uuid/uuid.dart';
 import 'package:kluber/db/database.dart';
 import 'package:kluber/pages/planos_lub/arvore.dart';
 
@@ -30,8 +31,22 @@ class _CadPlanoLubState extends State<CadPlanoLub> {
   final TextEditingController _dataRevController = TextEditingController();
 
   final DatabaseHelper _databaseHelper = DatabaseHelper();
+  String gerarCodigoMobile() {
+    // Obter parte do timestamp atual (por exemplo, os últimos 6 dígitos)
+    String timestamp = DateTime.now().millisecondsSinceEpoch.toString();
+    String parteTimestamp = timestamp.substring(timestamp.length - 6);
+
+    // Gerar um UUID curto
+    String uuid = const Uuid().v4().split('-').first;
+
+    // Combinar parte do timestamp com parte do UUID
+    String codigoMobile = parteTimestamp + uuid;
+
+    return codigoMobile;
+  }
 
   Future<int> salvarDados() async {
+    print(gerarCodigoMobile());
     try {
       // Captura os valores dos controllers
       String cliente = _clienteController.text;
@@ -46,7 +61,8 @@ class _CadPlanoLubState extends State<CadPlanoLub> {
         'data_cadastro': dataCadastro,
         'data_revisao': dataRevisao,
         'responsavel_lubrificacao': responsavelLubrificacao,
-        'responsavel_kluber': responsavelKluber
+        'responsavel_kluber': responsavelKluber,
+        'codigo_mobile': gerarCodigoMobile(),
       };
 
       // Insere os dados na base de dados e retorna o ID do plano inserido
@@ -73,6 +89,7 @@ class _CadPlanoLubState extends State<CadPlanoLub> {
   @override
   void initState() {
     super.initState();
+
     initializeData();
     _initializeDatabase();
     entryDate = DateTime.now();
