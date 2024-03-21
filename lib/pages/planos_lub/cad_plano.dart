@@ -1,11 +1,14 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:kluber/class/api_config.dart';
 import 'package:kluber/class/color_config.dart';
 import 'package:flutter_typeahead/flutter_typeahead.dart';
 import 'package:kluber/class/float_buttom.dart';
-// import 'package:shared_preferences/shared_preferences.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 // import 'package:intl/intl.dart';
 import 'dart:convert';
 import 'package:uuid/uuid.dart';
@@ -30,7 +33,7 @@ class _CadPlanoLubState extends State<CadPlanoLub> {
   final TextEditingController _resKluberController = TextEditingController();
   final TextEditingController _resAreaController = TextEditingController();
   final TextEditingController _dataRevController = TextEditingController();
-
+  late List<Map<String, dynamic>> _clientes;
   final DatabaseHelper _databaseHelper = DatabaseHelper();
   String gerarCodigoMobile() {
     // Obter parte do timestamp atual (por exemplo, os últimos 6 dígitos)
@@ -83,13 +86,26 @@ class _CadPlanoLubState extends State<CadPlanoLub> {
     setState(() {
       userDataLoaded = true;
     });
-    await _fetchClientes('');
+    // await _fetchClientes('');
     await _fetchUsers('');
   }
 
   @override
   void initState() {
     super.initState();
+    _carregarClientesOffline().then((clientesLocais) {
+      if (clientesLocais.isNotEmpty) {
+        // Atualizar a UI com os dados locais
+        setState(() {
+          _clientes = clientesLocais;
+        });
+      } else {
+        // Buscar dados online, já que não há dados locais disponíveis
+        _fetchClientes('');
+      }
+    });
+
+
 
     initializeData();
     _initializeDatabase();
@@ -126,55 +142,104 @@ class _CadPlanoLubState extends State<CadPlanoLub> {
     }
   }
 
-  Future<List<Map<String, dynamic>>> _fetchClientes(String searchText) async {
-    final response = await http.post(
-      Uri.parse(
-          '${ApiConfig.apiUrl}/get-clientes'), // Remova o parâmetro 'page' da URL
-      body: json.encode({"codigo_empresa": '0001', "search_text": searchText}),
-      headers: {
-        "Content-Type": "application/json",
-      },
-    );
+  Future<List<Map<String, dynamic>>> _carregarClientesOffline() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    final String? clientesString = prefs.getString('clientes');
+    List<Map<String, dynamic>> allClients = [];
 
-    if (response.statusCode == 200) {
-      final dynamic responseData = json.decode(response.body);
-      if (responseData is List<dynamic>) {
-        final List<Map<String, dynamic>> clientes =
-            List<Map<String, dynamic>>.from(responseData);
-        // print(clientes);
-        return clientes; // Retorne a lista de sugestões
-      } else {
-        throw Exception(
-            "Falha ao carregar os clientes: dados não são uma lista");
-      }
+    if (clientesString != null) {
+      final List<dynamic> clientesJson = json.decode(clientesString);
+      allClients = clientesJson.cast<Map<String, dynamic>>();
+    }
+
+    return allClients;
+  }
+
+  Future<List<Map<String, dynamic>>> _fetchClientes(String searchText) async {
+    final connectivityResult = await (Connectivity().checkConnectivity());
+    if (connectivityResult == ConnectivityResult.none) {
+      print('Sem conexão com a internet');
+      return _carregarClientesOffline();
     } else {
-      throw Exception("Falha ao carregar os clientes");
+      try {
+        final response = await http.post(
+          Uri.parse('${ApiConfig.apiUrl}/get-clientes'),
+          body: json
+              .encode({"codigo_empresa": '0001', "search_text": searchText}),
+          headers: {"Content-Type": "application/json"},
+        ).timeout(const Duration(seconds: 5)); // Timeout de 5 segundos
+
+        if (response.statusCode == 200) {
+          final responseData = json.decode(response.body);
+
+          final SharedPreferences prefs = await SharedPreferences.getInstance();
+          await prefs.setString('clientes', json.encode(responseData));
+
+          return List<Map<String, dynamic>>.from(responseData);
+        } else {
+          print('Falha na requisição: ${response.statusCode}');
+          return _carregarClientesOffline(); // Fallback para dados offline
+        }
+      } on TimeoutException catch (_) {
+        print('A requisição excedeu o tempo limite');
+        return _carregarClientesOffline(); // Fallback para dados offline
+      } catch (e) {
+        print('Erro ao fazer a requisição: $e');
+        return _carregarClientesOffline(); // Outro erro, use o fallback
+      }
     }
   }
 
   Future<List<Map<String, dynamic>>> _fetchUsers(String searchText) async {
-    final response = await http.post(
-      Uri.parse(
-          '${ApiConfig.apiUrl}/get-users-kluber'), // Remova o parâmetro 'page' da URL
-      body: json.encode({"codigo_empresa": '0001', "search_text": searchText}),
-      headers: {
-        "Content-Type": "application/json",
-      },
-    );
-
-    if (response.statusCode == 200) {
-      final dynamic responseData = json.decode(response.body);
-      if (responseData is List<dynamic>) {
-        final List<Map<String, dynamic>> usuarios =
-            List<Map<String, dynamic>>.from(responseData);
-        // print(clientes);
-        return usuarios; // Retorne a lista de sugestões
-      } else {
-        throw Exception(
-            "Falha ao carregar os clientes: dados não são uma lista");
-      }
+    var connectivityResult = await (Connectivity().checkConnectivity());
+    if (connectivityResult == ConnectivityResult.none) {
+      // Não há conexão com a internet
+      return _carregarUsuariosOffline(searchText);
     } else {
-      throw Exception("Falha ao carregar os clientes");
+      try {
+        final response = await http.post(
+          Uri.parse('${ApiConfig.apiUrl}/get-users-kluber'),
+          body: json
+              .encode({"codigo_empresa": '0001', "search_text": searchText}),
+          headers: {"Content-Type": "application/json"},
+        );
+
+        if (response.statusCode == 200) {
+          final responseData = json.decode(response.body);
+
+          // Salva os usuários no SharedPreferences
+          final SharedPreferences prefs = await SharedPreferences.getInstance();
+          await prefs.setString('usuarios', json.encode(responseData));
+
+          return List<Map<String, dynamic>>.from(responseData);
+        } else {
+          print('Falha na requisição: ${response.statusCode}');
+          return _carregarUsuariosOffline(
+              searchText); // Fallback para dados offline
+        }
+      } catch (e) {
+        print('Erro ao fazer a requisição: $e');
+        return _carregarUsuariosOffline(
+            searchText); // Fallback para erro na requisição
+      }
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> _carregarUsuariosOffline(
+      String searchText) async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    final String? usuariosString = prefs.getString('usuarios');
+
+    if (usuariosString != null) {
+      final List<dynamic> usuariosJson = json.decode(usuariosString);
+      List<Map<String, dynamic>> allUsers =
+          usuariosJson.cast<Map<String, dynamic>>();
+
+      // Filtra os usuários com base no searchText, assumindo que 'nome_usuario' é o campo relevante
+
+      return allUsers;
+    } else {
+      return []; // Lista vazia se não houver dados salvos
     }
   }
 
