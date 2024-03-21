@@ -516,11 +516,48 @@ class _AreaState extends State<Arvore> {
                                                     ),
                                                     ElevatedButton(
                                                       onPressed: () {
-                                                        _excluirArea(areas[
-                                                                index]
-                                                            .id); // Chama o método de exclusão
-                                                        Navigator.of(context)
-                                                            .pop(); // Fecha o AlertDialog
+                                                        // Exibe um diálogo de confirmação antes de excluir
+                                                        showDialog(
+                                                          context: context,
+                                                          builder: (BuildContext
+                                                              context) {
+                                                            return AlertDialog(
+                                                              title: const Text(
+                                                                  "Confirmação"),
+                                                              content: const Text(
+                                                                  "Tem certeza de que deseja excluir este item?"),
+                                                              actions: <Widget>[
+                                                                TextButton(
+                                                                  onPressed:
+                                                                      () {
+                                                                    Navigator.of(
+                                                                            context)
+                                                                        .pop(); // Fecha o diálogo de confirmação
+                                                                  },
+                                                                  child: const Text(
+                                                                      "Cancelar"),
+                                                                ),
+                                                                TextButton(
+                                                                  onPressed:
+                                                                      () {
+                                                                    // Confirma a exclusão
+                                                                    _excluirArea(
+                                                                        areas[index]
+                                                                            .id); // Chama o método de exclusão
+                                                                    Navigator.of(
+                                                                            context)
+                                                                        .pop(); // Fecha o diálogo de confirmação
+                                                                    Navigator.of(
+                                                                            context)
+                                                                        .pop(); // Fecha a tela atual
+                                                                  },
+                                                                  child: const Text(
+                                                                      "Confirmar"),
+                                                                ),
+                                                              ],
+                                                            );
+                                                          },
+                                                        );
                                                       },
                                                       style: ElevatedButton
                                                           .styleFrom(
@@ -721,18 +758,37 @@ class _AreaState extends State<Arvore> {
                                                                           ElevatedButton(
                                                                             onPressed:
                                                                                 () {
-                                                                              _excluirSubArea(subarea.id); // Chama o método de exclusão
-                                                                              Navigator.of(context).pop();
+                                                                              showDialog(
+                                                                                context: context,
+                                                                                builder: (BuildContext context) {
+                                                                                  return AlertDialog(
+                                                                                    title: const Text("Confirmação"),
+                                                                                    content: const Text("Tem certeza de que deseja excluir este item?"),
+                                                                                    actions: <Widget>[
+                                                                                      TextButton(
+                                                                                        onPressed: () {
+                                                                                          Navigator.of(context).pop(); // Fecha o diálogo de confirmação
+                                                                                        },
+                                                                                        child: const Text("Cancelar"),
+                                                                                      ),
+                                                                                      TextButton(
+                                                                                        onPressed: () {
+                                                                                          _excluirSubArea(subarea.id); // Chama o método de exclusão
+                                                                                          Navigator.of(context).pop(); // Fecha o diálogo de confirmação
+                                                                                        },
+                                                                                        child: const Text("Confirmar"),
+                                                                                      ),
+                                                                                    ],
+                                                                                  );
+                                                                                },
+                                                                              );
                                                                             },
                                                                             style:
                                                                                 ElevatedButton.styleFrom(
                                                                               backgroundColor: Colors.black,
                                                                             ),
                                                                             child:
-                                                                                const Text(
-                                                                              'Deletar',
-                                                                              style: TextStyle(color: Colors.white),
-                                                                            ),
+                                                                                const Text('Deletar', style: TextStyle(color: Colors.white)),
                                                                           ),
                                                                         ],
                                                                       ),
@@ -920,16 +976,35 @@ class _AreaState extends State<Arvore> {
                                                                               ),
                                                                               ElevatedButton(
                                                                                 onPressed: () {
-                                                                                  _excluirLinha(linha.id); // Chama o método de exclusão
-                                                                                  Navigator.of(context).pop();
+                                                                                  showDialog(
+                                                                                    context: context,
+                                                                                    builder: (BuildContext context) {
+                                                                                      return AlertDialog(
+                                                                                        title: const Text("Confirmação"),
+                                                                                        content: const Text("Tem certeza de que deseja excluir este item?"),
+                                                                                        actions: <Widget>[
+                                                                                          TextButton(
+                                                                                            onPressed: () {
+                                                                                              Navigator.of(context).pop(); // Fecha o diálogo de confirmação
+                                                                                            },
+                                                                                            child: const Text("Cancelar"),
+                                                                                          ),
+                                                                                          TextButton(
+                                                                                            onPressed: () {
+                                                                                              _excluirLinha(linha.id); // Chama o método de exclusão
+                                                                                              Navigator.of(context).pop(); // Fecha o diálogo de confirmação
+                                                                                            },
+                                                                                            child: const Text("Confirmar"),
+                                                                                          ),
+                                                                                        ],
+                                                                                      );
+                                                                                    },
+                                                                                  );
                                                                                 },
                                                                                 style: ElevatedButton.styleFrom(
                                                                                   backgroundColor: Colors.black,
                                                                                 ),
-                                                                                child: const Text(
-                                                                                  'Deletar',
-                                                                                  style: TextStyle(color: Colors.white),
-                                                                                ),
+                                                                                child: const Text('Deletar', style: TextStyle(color: Colors.white)),
                                                                               ),
                                                                             ],
                                                                           ),
@@ -1303,16 +1378,35 @@ class _AreaState extends State<Arvore> {
                                                                                               ),
                                                                                               ElevatedButton(
                                                                                                 onPressed: () {
-                                                                                                  _excluirTagEquip(tagMaquina.id); // Chama o método de exclusão
-                                                                                                  Navigator.of(context).pop();
+                                                                                                  showDialog(
+                                                                                                    context: context,
+                                                                                                    builder: (BuildContext context) {
+                                                                                                      return AlertDialog(
+                                                                                                        title: const Text("Confirmação"),
+                                                                                                        content: const Text("Tem certeza de que deseja excluir este item?"),
+                                                                                                        actions: <Widget>[
+                                                                                                          TextButton(
+                                                                                                            onPressed: () {
+                                                                                                              Navigator.of(context).pop(); // Fecha o diálogo de confirmação
+                                                                                                            },
+                                                                                                            child: const Text("Cancelar"),
+                                                                                                          ),
+                                                                                                          TextButton(
+                                                                                                            onPressed: () {
+                                                                                                              _excluirTagEquip(tagMaquina.id); // Chama o método de exclusão
+                                                                                                              Navigator.of(context).pop(); // Fecha o diálogo de confirmação
+                                                                                                            },
+                                                                                                            child: const Text("Confirmar"),
+                                                                                                          ),
+                                                                                                        ],
+                                                                                                      );
+                                                                                                    },
+                                                                                                  );
                                                                                                 },
                                                                                                 style: ElevatedButton.styleFrom(
                                                                                                   backgroundColor: Colors.black,
                                                                                                 ),
-                                                                                                child: const Text(
-                                                                                                  'Deletar',
-                                                                                                  style: TextStyle(color: Colors.white),
-                                                                                                ),
+                                                                                                child: const Text('Deletar', style: TextStyle(color: Colors.white)),
                                                                                               ),
                                                                                             ],
                                                                                           ),
@@ -1477,8 +1571,33 @@ class _AreaState extends State<Arvore> {
                                                                                           ),
                                                                                           ElevatedButton(
                                                                                             onPressed: () {
-                                                                                              _excluirConEquip(conjuntoEquip.id); // Chama o método de exclusão
-                                                                                              Navigator.of(context).pop();
+                                                                                              // Exibe um diálogo de confirmação antes de excluir
+                                                                                              showDialog(
+                                                                                                context: context,
+                                                                                                builder: (BuildContext context) {
+                                                                                                  return AlertDialog(
+                                                                                                    title: const Text("Confirmação"),
+                                                                                                    content: const Text("Tem certeza de que deseja excluir este item?"),
+                                                                                                    actions: <Widget>[
+                                                                                                      TextButton(
+                                                                                                        onPressed: () {
+                                                                                                          Navigator.of(context).pop(); // Fecha o diálogo de confirmação
+                                                                                                        },
+                                                                                                        child: const Text("Cancelar"),
+                                                                                                      ),
+                                                                                                      TextButton(
+                                                                                                        onPressed: () {
+                                                                                                          // Confirma a exclusão
+                                                                                                          _excluirConEquip(conjuntoEquip.id); // Chama o método de exclusão
+                                                                                                          Navigator.of(context).pop(); // Fecha o diálogo de confirmação
+                                                                                                          Navigator.of(context).pop(); // Fecha a tela atual
+                                                                                                        },
+                                                                                                        child: const Text("Confirmar"),
+                                                                                                      ),
+                                                                                                    ],
+                                                                                                  );
+                                                                                                },
+                                                                                              );
                                                                                             },
                                                                                             style: ElevatedButton.styleFrom(
                                                                                               backgroundColor: Colors.black,
@@ -1602,8 +1721,8 @@ class _AreaState extends State<Arvore> {
       floatingActionButton: FloatBtn.build(
           context), // Chama o FloatingActionButton da classe FloatBtn
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      bottomNavigationBar:
-          FloatBtn.bottomAppBar(), // Chama o BottomAppBar da classe FloatBtn
+      bottomNavigationBar: FloatBtn.bottomAppBar(
+          context), // Chama o BottomAppBar da classe FloatBtn
     );
   }
 }

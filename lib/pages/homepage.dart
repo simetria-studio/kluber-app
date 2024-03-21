@@ -94,7 +94,7 @@ class _HomePageState extends State<HomePage> {
       floatingActionButton: FloatBtn.build(
           context), // Chama o FloatingActionButton da classe FloatBtn
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      bottomNavigationBar: FloatBtn.bottomAppBar(),
+      bottomNavigationBar: FloatBtn.bottomAppBar(context),
     );
   }
 }

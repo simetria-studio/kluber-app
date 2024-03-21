@@ -587,6 +587,30 @@ class DatabaseHelper {
     }
   }
 
+  Future<int> updatePlanoLub(int id, Map<String, dynamic> planoData) async {
+    final db = await database;
+    return await db.update(
+      'planolub',
+      planoData,
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  Future<Map<String, dynamic>?> getPlanoById(int areaId) async {
+    Database db = await database;
+    List<Map<String, dynamic>> results = await db.query(
+      'planolub',
+      where: 'id = ?',
+      whereArgs: [areaId],
+    );
+    if (results.isNotEmpty) {
+      return results.first;
+    } else {
+      return null;
+    }
+  }
+
   Future<Map<String, dynamic>?> getAreaById(int areaId) async {
     Database db = await database;
     List<Map<String, dynamic>> results = await db.query(

@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:kluber/class/color_config.dart';
+import 'package:kluber/pages/homepage.dart';
 import 'package:kluber/pages/planos_lub/cad_plano.dart';
-// Importe a tela CadPlanoLub aqui
+// Importe a tela HomePage aqui
 
 class FloatBtn {
   static Widget build(BuildContext context) {
@@ -17,7 +18,7 @@ class FloatBtn {
     );
   }
 
-  static Widget bottomAppBar() {
+  static Widget bottomAppBar(BuildContext context) {
     return BottomAppBar(
       shape: const CircularNotchedRectangle(),
       notchMargin: 4.0,
@@ -27,7 +28,12 @@ class FloatBtn {
         children: <Widget>[
           IconButton(
             icon: const Icon(Icons.home),
-            onPressed: () {},
+            onPressed: () {
+              Navigator.of(context).push(MaterialPageRoute(
+                builder: (context) =>
+                    const HomePage(), // Redirecionar para a HomePage
+              ));
+            },
             color: ColorConfig.preto,
           ),
           IconButton(

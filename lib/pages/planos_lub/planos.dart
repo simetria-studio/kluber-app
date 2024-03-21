@@ -4,6 +4,8 @@ import 'package:kluber/class/float_buttom.dart';
 import 'package:kluber/db/database.dart';
 import 'package:kluber/db/sync_db.dart';
 import 'package:kluber/pages/planos_lub/arvore.dart';
+import 'package:kluber/pages/planos_lub/edit_plano.dart';
+import 'package:intl/intl.dart';
 
 class Planos extends StatefulWidget {
   const Planos({super.key});
@@ -19,6 +21,12 @@ class _PlanosState extends State<Planos> {
   void initState() {
     super.initState();
     _loadPlanos();
+  }
+
+  String formatarData(String dataString) {
+    DateTime data = DateTime.parse(dataString);
+    DateFormat formatter = DateFormat('dd/MM/yyyy');
+    return formatter.format(data);
   }
 
   Future<void> _loadPlanos() async {
@@ -43,8 +51,15 @@ class _PlanosState extends State<Planos> {
         ),
         backgroundColor: ColorConfig.amarelo,
         actions: <Widget>[
-          IconButton(
-            icon: const Icon(Icons.sync, color: Colors.black),
+          TextButton(
+            child: const Text(
+              'Sincronizar',
+              style: TextStyle(
+                color: Colors.black,
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
             onPressed: () async {
               final sincronizador = Sincronizador();
               final result = await sincronizador.sincronizarDados();
@@ -103,8 +118,10 @@ class _PlanosState extends State<Planos> {
                               ),
                               const SizedBox(height: 10),
                               Text('Plano: ${plano['id']}'),
-                              Text('Cadastro: ${plano['data_cadastro']}'),
-                              Text('Revisão: ${plano['data_revisao']}'),
+                              Text(
+                                  'Cadastro: ${formatarData(plano['data_cadastro'])}'),
+                              Text(
+                                  'Revisão: ${formatarData(plano['data_revisao'])}'),
                               Text(
                                   'Responsável: ${plano['responsavel_lubrificacao']}'),
                               const SizedBox(height: 10),
@@ -115,7 +132,14 @@ class _PlanosState extends State<Planos> {
                                     padding: const EdgeInsets.all(8.0),
                                     child: ElevatedButton(
                                       onPressed: () {
-                                        // Ação ao pressionar 'Editar'
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) => EditPlano(
+                                              idPlano: plano['id'],
+                                            ),
+                                          ),
+                                        );
                                       },
                                       style: ElevatedButton.styleFrom(
                                         backgroundColor: ColorConfig.amarelo,
@@ -166,8 +190,8 @@ class _PlanosState extends State<Planos> {
       floatingActionButton: FloatBtn.build(
           context), // Chama o FloatingActionButton da classe FloatBtn
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      bottomNavigationBar:
-          FloatBtn.bottomAppBar(), // Chama o BottomAppBar da classe FloatBtn
+      bottomNavigationBar: FloatBtn.bottomAppBar(
+          context), // Chama o BottomAppBar da classe FloatBtn
     );
   }
 }

@@ -1,25 +1,25 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_typeahead/flutter_typeahead.dart';
 import 'package:intl/intl.dart';
 import 'package:kluber/class/api_config.dart';
 import 'package:kluber/class/color_config.dart';
-import 'package:flutter_typeahead/flutter_typeahead.dart';
 import 'package:kluber/class/float_buttom.dart';
-// import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
-// import 'package:intl/intl.dart';
-import 'dart:convert';
-import 'package:uuid/uuid.dart';
 import 'package:kluber/db/database.dart';
-import 'package:kluber/pages/planos_lub/arvore.dart';
+import 'package:kluber/pages/planos_lub/planos.dart';
+import 'package:uuid/uuid.dart';
 
-class CadPlanoLub extends StatefulWidget {
-  const CadPlanoLub({super.key});
+class EditPlano extends StatefulWidget {
+  final int idPlano;
+  const EditPlano({super.key, required this.idPlano});
 
   @override
-  State<CadPlanoLub> createState() => _CadPlanoLubState();
+  State<EditPlano> createState() => _EditPlanoState();
 }
 
-class _CadPlanoLubState extends State<CadPlanoLub> {
+class _EditPlanoState extends State<EditPlano> {
   bool userDataLoaded = false;
   late DateTime? entryDate;
   late DateTime? revDate;
@@ -46,34 +46,6 @@ class _CadPlanoLubState extends State<CadPlanoLub> {
     return codigoMobile;
   }
 
-  Future<int> salvarDados() async {
-    print(gerarCodigoMobile());
-    try {
-      // Captura os valores dos controllers
-      String cliente = _clienteController.text;
-      String dataCadastro = _dataCadController.text;
-      String dataRevisao = _dataRevController.text;
-      String responsavelLubrificacao = _resAreaController.text;
-      String responsavelKluber = _resKluberController.text;
-
-      // Organiza os dados em um mapa
-      Map<String, dynamic> planoLubData = {
-        'cliente': cliente,
-        'data_cadastro': _reformatarData(dataCadastro),
-        'data_revisao': _reformatarData(dataRevisao),
-        'responsavel_lubrificacao': responsavelLubrificacao,
-        'responsavel_kluber': responsavelKluber,
-        'codigo_mobile': gerarCodigoMobile(),
-      };
-
-      // Insere os dados na base de dados e retorna o ID do plano inserido
-      int id = await _databaseHelper.insertPlanoLub(planoLubData);
-      return id;
-    } catch (e) {
-      return -1; // Retorna -1 em caso de falha
-    }
-  }
-
   void _initializeDatabase() async {
     await _databaseHelper
         .database; // Chama o método para inicializar o banco de dados
@@ -87,10 +59,27 @@ class _CadPlanoLubState extends State<CadPlanoLub> {
     await _fetchUsers('');
   }
 
+  // Método para carregar os dados do plano existente
+  Future<void> _loadPlanoData() async {
+    // Recuperar os dados do plano do banco de dados usando o id
+    // Suponha que a função `getPlanoLubById` recupere os dados do plano pelo ID
+    Map<String, dynamic>? planoData =
+        await _databaseHelper.getPlanoById(widget.idPlano);
+
+    // Preencher os controllers com os dados do plano
+    setState(() {
+      _clienteController.text = planoData?['cliente'];
+      _dataCadController.text = planoData?['data_cadastro'];
+      _dataRevController.text = planoData?['data_revisao'];
+      _resAreaController.text = planoData?['responsavel_lubrificacao'];
+      _resKluberController.text = planoData?['responsavel_kluber'];
+    });
+  }
+
   @override
   void initState() {
     super.initState();
-
+    _loadPlanoData();
     initializeData();
     _initializeDatabase();
     entryDate = DateTime.now();
@@ -175,6 +164,46 @@ class _CadPlanoLubState extends State<CadPlanoLub> {
       }
     } else {
       throw Exception("Falha ao carregar os clientes");
+    }
+  }
+
+  Future<void> salvarPlano() async {
+    try {
+      // Captura os valores dos controllers
+      String cliente = _clienteController.text;
+      String dataCadastro = _dataCadController.text;
+      String dataRevisao = _dataRevController.text;
+      String responsavelLubrificacao = _resAreaController.text;
+      String responsavelKluber = _resKluberController.text;
+
+      // Organiza os dados em um mapa
+      Map<String, dynamic> planoLubData = {
+        'cliente': cliente,
+        'data_cadastro': _reformatarData(dataCadastro), // '2022-01-01'
+        'data_revisao': _reformatarData(dataRevisao),
+        'responsavel_lubrificacao': responsavelLubrificacao,
+        'responsavel_kluber': responsavelKluber,
+        // Você precisará do ID do plano para atualizar os dados no banco de dados
+      };
+
+      // Atualize os dados do plano na base de dados usando o ID do plano existente
+      await _databaseHelper.updatePlanoLub(widget.idPlano, planoLubData);
+
+      // Exibir uma mensagem de sucesso
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Dados atualizados com sucesso!'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      print(e);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Falha ao atualizar os dados.'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
@@ -323,15 +352,9 @@ class _CadPlanoLubState extends State<CadPlanoLub> {
               height: 50,
               child: ElevatedButton(
                 onPressed: () async {
-                  int idPlano = await salvarDados();
-                  if (idPlano != -1) {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => Arvore(idPlano: idPlano),
-                      ),
-                    );
-                  }
+                  await salvarPlano();
+                  Navigator.push(context,
+                      MaterialPageRoute(builder: (context) => const Planos()));
                 },
                 style: ElevatedButton.styleFrom(
                   foregroundColor: ColorConfig.preto,
@@ -340,7 +363,7 @@ class _CadPlanoLubState extends State<CadPlanoLub> {
                     borderRadius: BorderRadius.circular(10),
                   ),
                 ),
-                child: const Text('Próximo'),
+                child: const Text('Salvar'),
               ),
             ),
           ],
