@@ -163,7 +163,9 @@ class _CadConjEquiState extends State<CadConjEqui> {
                         borderRadius: BorderRadius.circular(10),
                       ),
                     ),
-                    onPressed: () {},
+                    onPressed: () {
+                       Navigator.of(context).pop();
+                    },
                     child: const Text('Cancelar'),
                   ),
                 ),

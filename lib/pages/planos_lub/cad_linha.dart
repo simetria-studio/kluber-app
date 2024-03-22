@@ -151,7 +151,9 @@ class _CadLinhaState extends State<CadLinha> {
                           borderRadius: BorderRadius.circular(10),
                         ),
                       ),
-                      onPressed: () {},
+                      onPressed: () {
+                         Navigator.of(context).pop();
+                      },
                       child: const Text('Cancelar'),
                     ),
                   ),

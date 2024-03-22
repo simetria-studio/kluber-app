@@ -142,7 +142,7 @@ class _CadTagMotorState extends State<CadTagMotor> {
               controller: _motorController,
               decoration: const InputDecoration(
                 border: OutlineInputBorder(),
-                labelText: 'Motor: ',
+                labelText: 'Máquina: ',
               ),
             ),
           ),
@@ -164,7 +164,9 @@ class _CadTagMotorState extends State<CadTagMotor> {
                         borderRadius: BorderRadius.circular(10),
                       ),
                     ),
-                    onPressed: () {},
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                    },
                     child: const Text('Cancelar'),
                   ),
                 ),

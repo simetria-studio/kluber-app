@@ -72,18 +72,38 @@ class _AreaState extends State<Arvore> {
       // Passo 2.2: Duplicar a tag de máquina
       var novaTagId = await db.insert('tag_maquina', {
         ...tagMaquina.first,
-        "id": null
-      }); // Remover ID para garantir que um novo seja gerado
+        "id": null // Remover ID para garantir que um novo seja gerado
+      });
 
       // Passo 2.3: Recuperar e duplicar os conjuntos de equipamentos associados
       var conjuntos = await db.query('conjunto_equip',
           where: 'tag_maquina_id = ?', whereArgs: [tagMaquinaId]);
+      Map<int, int> idMap = {}; // Mapear ID original para novo ID do conjunto
       for (var conjunto in conjuntos) {
-        await db.insert('conjunto_equip', {
+        int? originalId = conjunto['id'] as int?;
+
+        int novoConjuntoId = await db.insert('conjunto_equip', {
           ...conjunto,
-          "id": null,
-          "tag_maquina_id": novaTagId
-        }); // Atribuir novaTagId como a tag_maquina_id
+          "id": null, // Remover o ID original
+          "tag_maquina_id":
+              novaTagId // Atribuir novaTagId como a tag_maquina_id
+        });
+
+        idMap[originalId!] = novoConjuntoId;
+      }
+
+      // Novo Passo: Recuperar e duplicar os pontos associados aos conjuntos de equipamentos
+      for (var originalId in idMap.keys) {
+        var pontos = await db.query('pontos',
+            where: 'conjunto_equip_id = ?', whereArgs: [originalId]);
+        for (var ponto in pontos) {
+          await db.insert('pontos', {
+            ...ponto,
+            "id": null, // Remover o ID original para que um novo seja gerado
+            "conjunto_equip_id": idMap[
+                originalId] // Usar o novo ID do conjunto para os pontos duplicados
+          });
+        }
       }
     }
   }
@@ -957,7 +977,7 @@ class _AreaState extends State<Arvore> {
                                                                                   backgroundColor: ColorConfig.amarelo,
                                                                                 ),
                                                                                 child: const Text(
-                                                                                  'Cadastrar TAG e MOTOR',
+                                                                                  'Cadastrar TAG e Máquina',
                                                                                   style: TextStyle(color: Colors.black),
                                                                                 ),
                                                                               ),
@@ -1126,8 +1146,13 @@ class _AreaState extends State<Arvore> {
                                                                                 borderRadius: BorderRadius.circular(10),
                                                                               ),
                                                                               child: IconButton(
-                                                                                onPressed: () {},
-                                                                                icon: const Icon(Icons.visibility_off),
+                                                                                onPressed: () {
+                                                                                  setState(() {
+                                                                                    tagMaquina.isVisible = !tagMaquina.isVisible; // Alterna o estado de visibilidade
+                                                                                    // Alterna o estado de visibilidade
+                                                                                  });
+                                                                                },
+                                                                                icon: Icon(tagMaquina.isVisible ? Icons.visibility_off : Icons.visibility),
                                                                               ),
                                                                             ),
                                                                             Container(
@@ -1175,7 +1200,7 @@ class _AreaState extends State<Arvore> {
 
                                                                                                   setState(() async {
                                                                                                     await _carregarDados(); // Isso recarrega todos os dados e atualiza a UI
-
+                                                                                                    Navigator.of(context).pop();
                                                                                                     // Isso vai forçar a reconstrução do widget com os dados atualizados.
                                                                                                   });
                                                                                                 },
@@ -1271,6 +1296,9 @@ class _AreaState extends State<Arvore> {
                                                                                                                 ),
                                                                                                                 ElevatedButton(
                                                                                                                   onPressed: () async {
+                                                                                                                    bool sucesso = true;
+                                                                                                                    String mensagem = 'Copiado com sucesso';
+
                                                                                                                     // Copiar tag_maquina
                                                                                                                     Map<String, dynamic> novaTagMaquinaData = {
                                                                                                                       'tag_nome': tagMaquina.tagNome,
@@ -1282,56 +1310,51 @@ class _AreaState extends State<Arvore> {
 
                                                                                                                     if (novaTagMaquinaId > 0) {
                                                                                                                       // Verificar se existem conjuntos_equip associados à tag_maquina original
-                                                                                                                      final List<Map<String, dynamic>> conjuntosExistentes = await databaseHelper.getConjuntoEquipByTagMaquinaId(tagMaquina.id); // Presumindo que tagMaquina.id é o ID da tag original
+                                                                                                                      final List<Map<String, dynamic>> conjuntosExistentes = await databaseHelper.getConjuntoEquipByTagMaquinaId(tagMaquina.id);
 
-                                                                                                                      if (conjuntosExistentes.isNotEmpty) {
-                                                                                                                        // Para cada conjunto_equip existente, criar uma cópia para a nova tag_maquina
-                                                                                                                        for (var conjunto in conjuntosExistentes) {
-                                                                                                                          Map<String, dynamic> novoConjuntoEquipData = {
-                                                                                                                            'conj_nome': conjunto['conj_nome'],
-                                                                                                                            'equi_nome': conjunto['equi_nome'],
-                                                                                                                            'tag_maquina_id': novaTagMaquinaId,
-                                                                                                                          };
+                                                                                                                      for (var conjunto in conjuntosExistentes) {
+                                                                                                                        Map<String, dynamic> novoConjuntoEquipData = {
+                                                                                                                          'conj_nome': conjunto['conj_nome'],
+                                                                                                                          'equi_nome': conjunto['equi_nome'],
+                                                                                                                          'tag_maquina_id': novaTagMaquinaId,
+                                                                                                                        };
 
-                                                                                                                          final int novoConjuntoEquipId = await databaseHelper.insertConjuntoAndEquip(novoConjuntoEquipData);
+                                                                                                                        final int novoConjuntoEquipId = await databaseHelper.insertConjuntoAndEquip(novoConjuntoEquipData);
 
-                                                                                                                          if (novoConjuntoEquipId <= 0) {
-                                                                                                                            // Trate o erro de inserção de cada conjunto_equip
-                                                                                                                            ScaffoldMessenger.of(context).showSnackBar(
-                                                                                                                              const SnackBar(content: Text('Erro ao criar cópia de conjunto e equipamento.')),
-                                                                                                                            );
-                                                                                                                            Navigator.of(context).pop();
-                                                                                                                            // Considerar se deseja interromper o loop ou continuar tentando os demais conjuntos
+                                                                                                                        if (novoConjuntoEquipId <= 0) {
+                                                                                                                          sucesso = false;
+                                                                                                                          mensagem = 'Erro ao criar cópia de conjunto e equipamento.';
+                                                                                                                          break; // Sai do loop se houver falha
+                                                                                                                        } else {
+                                                                                                                          // Duplicar os pontos associados ao conjunto de equipamentos original
+                                                                                                                          final List<Map<String, dynamic>> pontosExistentes = await databaseHelper.getPontosByConjuntoEquipId(conjunto['id']);
+
+                                                                                                                          for (var ponto in pontosExistentes) {
+                                                                                                                            await databaseHelper.insertPontos({
+                                                                                                                              ...ponto,
+                                                                                                                              'id': null, // Remover o ID original para que um novo seja gerado
+                                                                                                                              'conjunto_equip_id': novoConjuntoEquipId, // Atribuir novoConjuntoEquipId como o conjunto_equip_id para os pontos duplicados
+                                                                                                                            });
                                                                                                                           }
                                                                                                                         }
-                                                                                                                        setState(() async {
-                                                                                                                          await _carregarDados();
-                                                                                                                        });
-
-                                                                                                                        ScaffoldMessenger.of(context).showSnackBar(
-                                                                                                                          const SnackBar(content: Text('Todas as cópias de conjunto e equipamento criadas com sucesso.')),
-                                                                                                                        );
-                                                                                                                        Navigator.of(context).pop();
-                                                                                                                      } else {
-                                                                                                                        setState(() async {
-                                                                                                                          await _carregarDados();
-                                                                                                                        });
-
-                                                                                                                        ScaffoldMessenger.of(context).showSnackBar(
-                                                                                                                          const SnackBar(content: Text('Copiado sem conjunto')),
-                                                                                                                        );
-                                                                                                                        Navigator.of(context).pop();
                                                                                                                       }
                                                                                                                     } else {
-                                                                                                                      // Tratar erro de inserção da tag_maquina
-                                                                                                                      ScaffoldMessenger.of(context).showSnackBar(
-                                                                                                                        const SnackBar(content: Text('Erro ao criar nova tag_maquina.')),
-                                                                                                                      );
-                                                                                                                      Navigator.of(context).pop();
+                                                                                                                      sucesso = false;
+                                                                                                                      mensagem = 'Erro ao criar nova tag_maquina.';
                                                                                                                     }
+
+                                                                                                                    if (sucesso) {
+                                                                                                                      await _carregarDados(); // Certifique-se de que esta função seja assíncrona ou remova o await se não for necessário
+                                                                                                                    }
+
+                                                                                                                    // Mostrar mensagem de sucesso ou erro
+                                                                                                                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(mensagem)));
+
+                                                                                                                    // Fechar modal apenas uma vez aqui
+                                                                                                                    Navigator.of(context).pop();
                                                                                                                   },
                                                                                                                   style: ElevatedButton.styleFrom(
-                                                                                                                    backgroundColor: ColorConfig.amarelo, // Substitua conforme necessário
+                                                                                                                    backgroundColor: Colors.amber, // Ajuste conforme necessário
                                                                                                                   ),
                                                                                                                   child: const Text(
                                                                                                                     'Copiar',
@@ -1394,6 +1417,7 @@ class _AreaState extends State<Arvore> {
                                                                                                           TextButton(
                                                                                                             onPressed: () {
                                                                                                               _excluirTagEquip(tagMaquina.id); // Chama o método de exclusão
+                                                                                                              Navigator.of(context).pop();
                                                                                                               Navigator.of(context).pop(); // Fecha o diálogo de confirmação
                                                                                                             },
                                                                                                             child: const Text("Confirmar"),
@@ -1435,229 +1459,225 @@ class _AreaState extends State<Arvore> {
                                                               ],
                                                             ),
                                                           ),
-                                                          ...tagMaquina
-                                                              .conjuntosEquip
-                                                              .map(
-                                                                  (conjuntoEquip) {
-                                                            return Container(
-                                                              width: double
-                                                                  .infinity,
-                                                              margin:
-                                                                  const EdgeInsets
-                                                                      .only(
-                                                                      left: 99,
-                                                                      top: 8),
-                                                              decoration:
-                                                                  BoxDecoration(
-                                                                border:
-                                                                    const Border(
-                                                                  bottom:
-                                                                      BorderSide(
-                                                                    color: ColorConfig
-                                                                        .preto,
+                                                          // Aqui você pode adicionar os conjuntos de equipamentos
+                                                          if (tagMaquina
+                                                              .isVisible)
+                                                            ...tagMaquina
+                                                                .conjuntosEquip
+                                                                .map(
+                                                                    (conjuntoEquip) {
+                                                              return Container(
+                                                                width: double
+                                                                    .infinity,
+                                                                margin:
+                                                                    const EdgeInsets
+                                                                        .only(
+                                                                        left:
+                                                                            99,
+                                                                        top: 8),
+                                                                decoration:
+                                                                    BoxDecoration(
+                                                                  border:
+                                                                      const Border(
+                                                                    bottom:
+                                                                        BorderSide(
+                                                                      color: ColorConfig
+                                                                          .preto,
+                                                                    ),
+                                                                    left:
+                                                                        BorderSide(
+                                                                      color: ColorConfig
+                                                                          .preto,
+                                                                    ),
+                                                                    right:
+                                                                        BorderSide(
+                                                                      color: ColorConfig
+                                                                          .preto,
+                                                                    ),
+                                                                    top:
+                                                                        BorderSide(
+                                                                      color: ColorConfig
+                                                                          .preto,
+                                                                    ),
                                                                   ),
-                                                                  left:
-                                                                      BorderSide(
-                                                                    color: ColorConfig
-                                                                        .preto,
-                                                                  ),
-                                                                  right:
-                                                                      BorderSide(
-                                                                    color: ColorConfig
-                                                                        .preto,
-                                                                  ),
-                                                                  top:
-                                                                      BorderSide(
-                                                                    color: ColorConfig
-                                                                        .preto,
-                                                                  ),
+                                                                  borderRadius:
+                                                                      BorderRadius
+                                                                          .circular(
+                                                                              10),
                                                                 ),
-                                                                borderRadius:
-                                                                    BorderRadius
-                                                                        .circular(
-                                                                            10),
-                                                              ),
-                                                              child: Column(
-                                                                mainAxisAlignment:
-                                                                    MainAxisAlignment
-                                                                        .start,
-                                                                crossAxisAlignment:
-                                                                    CrossAxisAlignment
-                                                                        .start,
-                                                                children: [
-                                                                  Row(
-                                                                    children: [
-                                                                      Expanded(
-                                                                        flex: 4,
-                                                                        child:
-                                                                            Padding(
-                                                                          padding: const EdgeInsets
-                                                                              .all(
-                                                                              4.0),
+                                                                child: Column(
+                                                                  mainAxisAlignment:
+                                                                      MainAxisAlignment
+                                                                          .start,
+                                                                  crossAxisAlignment:
+                                                                      CrossAxisAlignment
+                                                                          .start,
+                                                                  children: [
+                                                                    Row(
+                                                                      children: [
+                                                                        Expanded(
+                                                                          flex:
+                                                                              4,
                                                                           child:
-                                                                              Column(
-                                                                            mainAxisAlignment:
-                                                                                MainAxisAlignment.start,
-                                                                            crossAxisAlignment:
-                                                                                CrossAxisAlignment.start,
-                                                                            children: [
-                                                                              Text('CONJUNTO: ${conjuntoEquip.conjNome}'),
-                                                                              Text('EQUIPAMENTO: ${conjuntoEquip.equiNome}'),
-                                                                            ],
-                                                                          ),
-                                                                        ),
-                                                                      ),
-                                                                      Expanded(
-                                                                        flex: 1,
-                                                                        child:
-                                                                            Container(
-                                                                          width:
-                                                                              20,
-                                                                          decoration:
-                                                                              BoxDecoration(
-                                                                            color:
-                                                                                ColorConfig.amarelo,
-                                                                            border:
-                                                                                Border.all(
-                                                                              color: ColorConfig.preto,
-                                                                            ),
-                                                                            borderRadius:
-                                                                                BorderRadius.circular(10),
-                                                                          ),
-                                                                          child:
-                                                                              IconButton(
-                                                                            onPressed:
-                                                                                () {
-                                                                              showDialog(
-                                                                                context: context,
-                                                                                builder: (BuildContext context) {
-                                                                                  // Retorna um AlertDialog ou um Widget personalizado
-                                                                                  return AlertDialog(
-                                                                                    title: const Text('Ações'),
-                                                                                    content: SingleChildScrollView(
-                                                                                      child: ListBody(
-                                                                                        children: [
-                                                                                          ElevatedButton(
-                                                                                            onPressed: () {
-                                                                                              Navigator.push(
-                                                                                                context,
-                                                                                                MaterialPageRoute(
-                                                                                                  builder: (context) => CadPontos(
-                                                                                                      conjuntoId: conjuntoEquip.id, // Alteração aqui
-                                                                                                      idPlano: id),
-                                                                                                ),
-                                                                                              );
-                                                                                            },
-                                                                                            style: ElevatedButton.styleFrom(
-                                                                                              backgroundColor: ColorConfig.amarelo,
-                                                                                            ),
-                                                                                            child: const Text(
-                                                                                              'Cadastrar Pontos de Lubrificação',
-                                                                                              style: TextStyle(color: Colors.black),
-                                                                                            ),
-                                                                                          ),
-                                                                                          ElevatedButton(
-                                                                                            onPressed: () async {
-                                                                                              Navigator.push(
-                                                                                                context,
-                                                                                                MaterialPageRoute(
-                                                                                                  builder: (context) => EditConjEqui(
-                                                                                                      conjEquiId: conjuntoEquip.id, // Alteração aqui
-                                                                                                      id: id),
-                                                                                                ),
-                                                                                              );
-                                                                                            },
-                                                                                            child: const Text('Editar', style: TextStyle(color: Colors.black)),
-                                                                                          ),
-                                                                                          ElevatedButton(
-                                                                                            onPressed: () {
-                                                                                              // Exibe um diálogo de confirmação antes de excluir
-                                                                                              showDialog(
-                                                                                                context: context,
-                                                                                                builder: (BuildContext context) {
-                                                                                                  return AlertDialog(
-                                                                                                    title: const Text("Confirmação"),
-                                                                                                    content: const Text("Tem certeza de que deseja excluir este item?"),
-                                                                                                    actions: <Widget>[
-                                                                                                      TextButton(
-                                                                                                        onPressed: () {
-                                                                                                          Navigator.of(context).pop(); // Fecha o diálogo de confirmação
-                                                                                                        },
-                                                                                                        child: const Text("Cancelar"),
-                                                                                                      ),
-                                                                                                      TextButton(
-                                                                                                        onPressed: () {
-                                                                                                          // Confirma a exclusão
-                                                                                                          _excluirConEquip(conjuntoEquip.id); // Chama o método de exclusão
-                                                                                                          Navigator.of(context).pop(); // Fecha o diálogo de confirmação
-                                                                                                          Navigator.of(context).pop(); // Fecha a tela atual
-                                                                                                        },
-                                                                                                        child: const Text("Confirmar"),
-                                                                                                      ),
-                                                                                                    ],
-                                                                                                  );
-                                                                                                },
-                                                                                              );
-                                                                                            },
-                                                                                            style: ElevatedButton.styleFrom(
-                                                                                              backgroundColor: Colors.black,
-                                                                                            ),
-                                                                                            child: const Text(
-                                                                                              'Deletar',
-                                                                                              style: TextStyle(color: Colors.white),
-                                                                                            ),
-                                                                                          ),
-                                                                                        ],
-                                                                                      ),
-                                                                                    ),
-                                                                                    actions: <Widget>[
-                                                                                      TextButton(
-                                                                                        child: const Text('Fechar', style: TextStyle(color: ColorConfig.preto)),
-                                                                                        onPressed: () {
-                                                                                          Navigator.of(context).pop();
-                                                                                        },
-                                                                                      ),
-                                                                                    ],
-                                                                                  );
-                                                                                },
-                                                                              );
-                                                                            },
-                                                                            icon:
-                                                                                const Icon(Icons.menu),
-                                                                          ),
-                                                                        ),
-                                                                      ),
-                                                                    ],
-                                                                  ),
-                                                                  ...conjuntoEquip
-                                                                      .pontosLub
-                                                                      .map(
-                                                                          (ponto) {
-                                                                    return Container(
-                                                                      child:
-                                                                          Column(
-                                                                        children: [
-                                                                          TextButton(
+                                                                              Padding(
+                                                                            padding:
+                                                                                const EdgeInsets.all(4.0),
                                                                             child:
-                                                                                Text('Ponto: ${ponto.componentName}', style: const TextStyle(color: ColorConfig.preto)),
-                                                                            onPressed:
-                                                                                () {
-                                                                              Navigator.push(
-                                                                                context,
-                                                                                MaterialPageRoute(
-                                                                                  builder: (context) => PontoDetail(id: ponto.id),
-                                                                                ),
-                                                                              );
-                                                                            },
+                                                                                Column(
+                                                                              mainAxisAlignment: MainAxisAlignment.start,
+                                                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                                                              children: [
+                                                                                Text('CONJUNTO: ${conjuntoEquip.conjNome}'),
+                                                                                Text('EQUIPAMENTO: ${conjuntoEquip.equiNome}'),
+                                                                              ],
+                                                                            ),
                                                                           ),
-                                                                        ],
-                                                                      ),
-                                                                    );
-                                                                  }).toList(),
-                                                                ],
-                                                              ),
-                                                            );
-                                                          }).toList(),
+                                                                        ),
+                                                                        Expanded(
+                                                                          flex:
+                                                                              1,
+                                                                          child:
+                                                                              Container(
+                                                                            width:
+                                                                                20,
+                                                                            decoration:
+                                                                                BoxDecoration(
+                                                                              color: ColorConfig.amarelo,
+                                                                              border: Border.all(
+                                                                                color: ColorConfig.preto,
+                                                                              ),
+                                                                              borderRadius: BorderRadius.circular(10),
+                                                                            ),
+                                                                            child:
+                                                                                IconButton(
+                                                                              onPressed: () {
+                                                                                showDialog(
+                                                                                  context: context,
+                                                                                  builder: (BuildContext context) {
+                                                                                    // Retorna um AlertDialog ou um Widget personalizado
+                                                                                    return AlertDialog(
+                                                                                      title: const Text('Ações'),
+                                                                                      content: SingleChildScrollView(
+                                                                                        child: ListBody(
+                                                                                          children: [
+                                                                                            ElevatedButton(
+                                                                                              onPressed: () {
+                                                                                                Navigator.push(
+                                                                                                  context,
+                                                                                                  MaterialPageRoute(
+                                                                                                    builder: (context) => CadPontos(
+                                                                                                        conjuntoId: conjuntoEquip.id, // Alteração aqui
+                                                                                                        idPlano: id),
+                                                                                                  ),
+                                                                                                );
+                                                                                              },
+                                                                                              style: ElevatedButton.styleFrom(
+                                                                                                backgroundColor: ColorConfig.amarelo,
+                                                                                              ),
+                                                                                              child: const Text(
+                                                                                                'Cadastrar Pontos de Lubrificação',
+                                                                                                style: TextStyle(color: Colors.black),
+                                                                                              ),
+                                                                                            ),
+                                                                                            ElevatedButton(
+                                                                                              onPressed: () async {
+                                                                                                Navigator.push(
+                                                                                                  context,
+                                                                                                  MaterialPageRoute(
+                                                                                                    builder: (context) => EditConjEqui(
+                                                                                                        conjEquiId: conjuntoEquip.id, // Alteração aqui
+                                                                                                        id: id),
+                                                                                                  ),
+                                                                                                );
+                                                                                              },
+                                                                                              child: const Text('Editar', style: TextStyle(color: Colors.black)),
+                                                                                            ),
+                                                                                            ElevatedButton(
+                                                                                              onPressed: () {
+                                                                                                // Exibe um diálogo de confirmação antes de excluir
+                                                                                                showDialog(
+                                                                                                  context: context,
+                                                                                                  builder: (BuildContext context) {
+                                                                                                    return AlertDialog(
+                                                                                                      title: const Text("Confirmação"),
+                                                                                                      content: const Text("Tem certeza de que deseja excluir este item?"),
+                                                                                                      actions: <Widget>[
+                                                                                                        TextButton(
+                                                                                                          onPressed: () {
+                                                                                                            Navigator.of(context).pop(); // Fecha o diálogo de confirmação
+                                                                                                          },
+                                                                                                          child: const Text("Cancelar"),
+                                                                                                        ),
+                                                                                                        TextButton(
+                                                                                                          onPressed: () {
+                                                                                                            // Confirma a exclusão
+                                                                                                            _excluirConEquip(conjuntoEquip.id); // Chama o método de exclusão
+                                                                                                            Navigator.of(context).pop(); // Fecha o diálogo de confirmação
+                                                                                                            Navigator.of(context).pop(); // Fecha a tela atual
+                                                                                                          },
+                                                                                                          child: const Text("Confirmar"),
+                                                                                                        ),
+                                                                                                      ],
+                                                                                                    );
+                                                                                                  },
+                                                                                                );
+                                                                                              },
+                                                                                              style: ElevatedButton.styleFrom(
+                                                                                                backgroundColor: Colors.black,
+                                                                                              ),
+                                                                                              child: const Text(
+                                                                                                'Deletar',
+                                                                                                style: TextStyle(color: Colors.white),
+                                                                                              ),
+                                                                                            ),
+                                                                                          ],
+                                                                                        ),
+                                                                                      ),
+                                                                                      actions: <Widget>[
+                                                                                        TextButton(
+                                                                                          child: const Text('Fechar', style: TextStyle(color: ColorConfig.preto)),
+                                                                                          onPressed: () {
+                                                                                            Navigator.of(context).pop();
+                                                                                          },
+                                                                                        ),
+                                                                                      ],
+                                                                                    );
+                                                                                  },
+                                                                                );
+                                                                              },
+                                                                              icon: const Icon(Icons.menu),
+                                                                            ),
+                                                                          ),
+                                                                        ),
+                                                                      ],
+                                                                    ),
+                                                                    ...conjuntoEquip
+                                                                        .pontosLub
+                                                                        .map(
+                                                                            (ponto) {
+                                                                      return Container(
+                                                                        child:
+                                                                            Column(
+                                                                          children: [
+                                                                            TextButton(
+                                                                              child: Text('Ponto: ${ponto.componentName} - ${ponto.componentDescricao} ', style: const TextStyle(color: ColorConfig.preto)),
+                                                                              onPressed: () {
+                                                                                Navigator.push(
+                                                                                  context,
+                                                                                  MaterialPageRoute(
+                                                                                    builder: (context) => PontoDetail(id: ponto.id),
+                                                                                  ),
+                                                                                );
+                                                                              },
+                                                                            ),
+                                                                          ],
+                                                                        ),
+                                                                      );
+                                                                    }).toList(),
+                                                                  ],
+                                                                ),
+                                                              );
+                                                            }).toList(),
                                                         ],
                                                       ),
                                                     )
@@ -1683,7 +1703,7 @@ class _AreaState extends State<Arvore> {
                                                       ),
                                                     ),
                                                     child: const Text(
-                                                      'Cadastrar TAG e MOTOR',
+                                                      'Cadastrar TAG e Máquina',
                                                       style: TextStyle(
                                                           color: ColorConfig
                                                               .preto),
@@ -1805,6 +1825,7 @@ class LinhaModel {
 class TagMaquina {
   final String tagNome;
   final String maquinaNome;
+  bool isVisible;
   final int id;
   final List<ConjuntoEquipModel>
       conjuntosEquip; // Adicione esta lista ao modelo
@@ -1813,6 +1834,7 @@ class TagMaquina {
     required this.tagNome,
     required this.maquinaNome,
     required this.conjuntosEquip,
+    this.isVisible = true,
     required this.id,
     // Inclua no construtor
   });
@@ -1822,12 +1844,14 @@ class ConjuntoEquipModel {
   final int id;
   final String conjNome;
   final String equiNome;
+  bool isVisible;
   List<PontoLubModel> pontosLub;
 
   ConjuntoEquipModel({
     required this.id,
     required this.conjNome,
     required this.equiNome,
+    this.isVisible = true,
     this.pontosLub = const [],
   });
 }
@@ -1836,12 +1860,17 @@ class PontoLubModel {
   final int id;
   final String componentName;
   final String componentCodigo;
+  final String componentDescricao;
+  bool isVisible;
+
   // Adicione outros campos conforme necessário
 
   PontoLubModel({
     required this.id,
     required this.componentName,
     required this.componentCodigo,
+    required this.componentDescricao,
+    this.isVisible = true,
     // Inicialize outros campos aqui
   });
 
@@ -1852,6 +1881,7 @@ class PontoLubModel {
       id: map['id'],
       componentName: map['component_name'],
       componentCodigo: map['component_codigo'],
+      componentDescricao: map['atv_breve_name'],
       // Atribua outros campos aqui
     );
   }

@@ -149,7 +149,9 @@ class _CadAreaState extends State<CadArea> {
                           borderRadius: BorderRadius.circular(10),
                         ),
                       ),
-                      onPressed: () {},
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                      },
                       child: const Text('Cancelar'),
                     ),
                   ),
