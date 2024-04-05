@@ -1,4 +1,4 @@
-package com.example.kluber
+package com.kluber
 
 import io.flutter.embedding.android.FlutterActivity
 

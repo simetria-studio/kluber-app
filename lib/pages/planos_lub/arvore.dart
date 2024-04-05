@@ -1234,6 +1234,7 @@ class _AreaState extends State<Arvore> {
                                                                                                                   width: double.infinity,
                                                                                                                   padding: const EdgeInsets.all(5),
                                                                                                                   child: DropdownButton<String>(
+                                                                                                                    borderRadius: BorderRadius.circular(10),
                                                                                                                     hint: const Text('Selecione a área'),
                                                                                                                     value: selectedAreaId,
                                                                                                                     onChanged: (newValue) {
@@ -1254,6 +1255,7 @@ class _AreaState extends State<Arvore> {
                                                                                                                   width: double.infinity,
                                                                                                                   padding: const EdgeInsets.all(5),
                                                                                                                   child: DropdownButton<String>(
+                                                                                                                    borderRadius: BorderRadius.circular(10),
                                                                                                                     hint: const Text('Selecione a subárea'),
                                                                                                                     value: selectedSubareaId,
                                                                                                                     onChanged: _subareas.isNotEmpty
@@ -1276,6 +1278,7 @@ class _AreaState extends State<Arvore> {
                                                                                                                   width: double.infinity,
                                                                                                                   padding: const EdgeInsets.all(5),
                                                                                                                   child: DropdownButton<String>(
+                                                                                                                    borderRadius: BorderRadius.circular(10),
                                                                                                                     hint: const Text('Selecione a linha'),
                                                                                                                     value: selectedLinhaId,
                                                                                                                     onChanged: _linhas.isNotEmpty
