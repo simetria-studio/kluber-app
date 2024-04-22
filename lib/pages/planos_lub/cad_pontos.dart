@@ -38,6 +38,7 @@ class _CadPontosState extends State<CadPontos> {
   final TextEditingController _periodicidadeCodeController =
       TextEditingController();
   final TextEditingController _qtyPessoasController = TextEditingController();
+  final TextEditingController _tempoAtvController = TextEditingController();
   String cliente = '';
   String dataCadastro = '';
   String dataRevisao = '';
@@ -79,7 +80,7 @@ class _CadPontosState extends State<CadPontos> {
     setState(() {
       userDataLoaded = true;
     });
-    await _fetchComponets('');
+    // await _fetchComponets('');
     await _fetchAtvBreve('');
     await _fetchMaterial('');
     await _fetchCondOp('');
@@ -99,6 +100,7 @@ class _CadPontosState extends State<CadPontos> {
       String condOpName = _condOpController.text;
       String condOpCodigo = _condOpCodeController.text;
       String periodName = _periodicidadeController.text;
+      String tempoAtv = _tempoAtvController.text;
       String periodCodigo = _periodicidadeCodeController.text;
       String qtyPessoas = _qtyPessoasController.text;
       int conjuntoEquipId = widget.conjuntoId;
@@ -117,6 +119,7 @@ class _CadPontosState extends State<CadPontos> {
         'cond_op_codigo': condOpCodigo,
         'period_name': periodName,
         'period_codigo': periodCodigo,
+        'tempo_atv': tempoAtv,
         'qty_pessoas': qtyPessoas,
         'conjunto_equip_id': conjuntoEquipId,
         'plano_id': widget.idPlano,
@@ -130,232 +133,390 @@ class _CadPontosState extends State<CadPontos> {
     }
   }
 
-  Future<List<Map<String, dynamic>>> _fetchComponets(String searchText) async {
-    // Checando a conectividade primeiro
+  Future<List<Map<String, dynamic>>> _fetchComponents(String searchText) async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    String cacheKey =
+        'componentes_cache_${searchText.replaceAll(RegExp('[^A-Za-z0-9]'), '')}';
+    var cachedData = prefs.getString(cacheKey);
+
+    print("Cache Key: $cacheKey");
+    if (cachedData != null) {
+      print("Using cached data for $searchText");
+      var decodedData =
+          List<Map<String, dynamic>>.from(json.decode(cachedData));
+      print("Decoded Data: $decodedData");
+      return decodedData;
+    }
+
+    print("No cache found for $searchText. Fetching from API.");
     var connectivityResult = await (Connectivity().checkConnectivity());
     if (connectivityResult == ConnectivityResult.none) {
-      // Se estiver offline, tente carregar os dados salvos
-      return _carregarComponentesOffline();
+      print("Offline mode: Fetching data from local fallback");
+      return _carregarComponentesOffline(searchText);
     } else {
-      // Se estiver online, faça a requisição HTTP
-      try {
-        final response = await http.post(
-          Uri.parse('${ApiConfig.apiUrl}/get-components'),
-          body: json
-              .encode({"codigo_empresa": '0001', "search_text": searchText}),
-          headers: {"Content-Type": "application/json"},
-        );
-
-        if (response.statusCode == 200) {
-          final responseData = json.decode(response.body);
-
-          // Salva os componentes no SharedPreferences
-          final SharedPreferences prefs = await SharedPreferences.getInstance();
-          await prefs.setString('componentes', json.encode(responseData));
-
-          return List<Map<String, dynamic>>.from(responseData);
-        } else {
-          print('Falha na requisição: ${response.statusCode}');
-          return _carregarComponentesOffline(); // Fallback para dados offline
-        }
-      } catch (e) {
-        print('Erro ao fazer a requisição: $e');
-        return _carregarComponentesOffline(); // Fallback para erro na requisição
-      }
+      print("Online mode: Fetching data from API");
+      return _fetchComponentsFromApi(searchText);
     }
   }
 
-  Future<List<Map<String, dynamic>>> _carregarComponentesOffline() async {
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
-    final String? componentesString = prefs.getString('componentes');
+  Future<List<Map<String, dynamic>>> _fetchComponentsFromApi(
+      String searchText) async {
+    try {
+      final response = await http.post(
+        Uri.parse('${ApiConfig.apiUrl}/get-components'),
+        body:
+            json.encode({"codigo_empresa": '0001', "search_text": searchText}),
+        headers: {"Content-Type": "application/json"},
+      );
 
-    if (componentesString != null) {
-      final List<dynamic> componentesJson = json.decode(componentesString);
-      return componentesJson.cast<Map<String, dynamic>>();
-    } else {
-      return []; // Lista vazia se não houver dados salvos
+      print("API Response for $searchText: ${response.body}");
+
+      if (response.statusCode == 200) {
+        final responseData = json.decode(response.body);
+        final SharedPreferences prefs = await SharedPreferences.getInstance();
+        await prefs.setString(
+            'componentes_cache_$searchText', json.encode(responseData));
+        return List<Map<String, dynamic>>.from(responseData);
+      } else {
+        print('Falha na requisição: ${response.statusCode}');
+        return _carregarComponentesOffline(
+            searchText); // Fallback para dados offline
+      }
+    } catch (e) {
+      print('Erro ao fazer a requisição: $e');
+      return _carregarComponentesOffline(
+          searchText); // Fallback para erro na requisição
     }
+  }
+
+  Future<List<Map<String, dynamic>>> _carregarComponentesOffline(
+      String searchText) async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    var allComponentsString = prefs
+        .getString('componentes'); // Cache genérico de todos os componentes
+    if (allComponentsString != null) {
+      List<Map<String, dynamic>> allComponents =
+          List<Map<String, dynamic>>.from(json.decode(allComponentsString));
+      return allComponents.where((component) {
+        final nomeComponente = component['descricao'] as String?;
+        return nomeComponente
+                ?.toLowerCase()
+                .contains(searchText.toLowerCase()) ??
+            false;
+      }).toList();
+    }
+    return []; // Lista vazia se não houver dados salvos
   }
 
   Future<List<Map<String, dynamic>>> _fetchAtvBreve(String searchText) async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    // Cria uma chave de cache específica para a pesquisa
+    String cacheKey =
+        'atividadeBreve_${searchText.replaceAll(RegExp('[^A-Za-z0-9]'), '')}';
+    var cachedData = prefs.getString(cacheKey);
+
+    if (cachedData != null) {
+      print("Using cached data for $searchText");
+      return List<Map<String, dynamic>>.from(json.decode(cachedData));
+    }
+
+    print("No cache found for $searchText. Checking connectivity.");
     var connectivityResult = await (Connectivity().checkConnectivity());
     if (connectivityResult == ConnectivityResult.none) {
-      // Carrega dados offline
-      return _carregarAtvBreveOffline();
+      print("Offline mode: No cached data available.");
+      return _carregarAtvBreveOffline(searchText);
     } else {
-      try {
-        final response = await http.post(
-          Uri.parse('${ApiConfig.apiUrl}/get-atividade-breve'),
-          body: json
-              .encode({"codigo_empresa": '0001', "search_text": searchText}),
-          headers: {"Content-Type": "application/json"},
-        );
-
-        if (response.statusCode == 200) {
-          final responseData = json.decode(response.body);
-
-          // Salva a resposta no SharedPreferences
-          final SharedPreferences prefs = await SharedPreferences.getInstance();
-          await prefs.setString('atividadeBreve', json.encode(responseData));
-
-          return List<Map<String, dynamic>>.from(responseData);
-        } else {
-          print('Falha na requisição: ${response.statusCode}');
-          return _carregarAtvBreveOffline(); // Fallback para dados offline
-        }
-      } catch (e) {
-        print('Erro ao fazer a requisição: $e');
-        return _carregarAtvBreveOffline(); // Fallback para erro na requisição
-      }
+      print("Online mode: Fetching data from API");
+      return _fetchAtvBreveFromApi(searchText, cacheKey);
     }
   }
 
-  Future<List<Map<String, dynamic>>> _carregarAtvBreveOffline() async {
+  Future<List<Map<String, dynamic>>> _fetchAtvBreveFromApi(
+      String searchText, String cacheKey) async {
+    try {
+      final response = await http.post(
+        Uri.parse('${ApiConfig.apiUrl}/get-atividade-breve'),
+        body:
+            json.encode({"codigo_empresa": '0001', "search_text": searchText}),
+        headers: {"Content-Type": "application/json"},
+      );
+
+      print("API Response for $searchText: ${response.body}");
+
+      if (response.statusCode == 200) {
+        final responseData = json.decode(response.body);
+        final SharedPreferences prefs = await SharedPreferences.getInstance();
+        await prefs.setString(cacheKey, json.encode(responseData));
+        return List<Map<String, dynamic>>.from(responseData);
+      } else {
+        print('Falha na requisição: ${response.statusCode}');
+        return _carregarAtvBreveOffline(
+            searchText); // Fallback para dados offline
+      }
+    } catch (e) {
+      print('Erro ao fazer a requisição: $e');
+      return _carregarAtvBreveOffline(
+          searchText); // Fallback para erro na requisição
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> _carregarAtvBreveOffline(
+      String searchText) async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     final String? atividadeBreveString = prefs.getString('atividadeBreve');
 
     if (atividadeBreveString != null) {
       final List<dynamic> atividadeBreveJson =
           json.decode(atividadeBreveString);
-      return atividadeBreveJson.cast<Map<String, dynamic>>();
+      List<Map<String, dynamic>> allActivities =
+          atividadeBreveJson.cast<Map<String, dynamic>>();
+
+      if (searchText.isNotEmpty) {
+        allActivities = allActivities.where((activity) {
+          // Add null safety check before calling toLowerCase
+          final descricao = activity['descricao'] as String?;
+          return descricao?.toLowerCase().contains(searchText.toLowerCase()) ??
+              false;
+        }).toList();
+      }
+
+      return allActivities;
     } else {
-      return []; // Lista vazia se não houver dados salvos
+      return []; // Returns an empty list if there are no saved data
     }
   }
 
   Future<List<Map<String, dynamic>>> _fetchMaterial(String searchText) async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    // Cria uma chave de cache específica para a pesquisa
+    String cacheKey =
+        'materiais_${searchText.replaceAll(RegExp('[^A-Za-z0-9]'), '')}';
+    var cachedData = prefs.getString(cacheKey);
+
+    if (cachedData != null) {
+      print("Using cached data for $searchText");
+      return List<Map<String, dynamic>>.from(json.decode(cachedData));
+    }
+
+    print("No cache found for $searchText. Checking connectivity.");
     var connectivityResult = await (Connectivity().checkConnectivity());
     if (connectivityResult == ConnectivityResult.none) {
-      // Carrega dados offline
-      return _carregarMateriaisOffline();
+      print("Offline mode: No cached data available.");
+      return _carregarMateriaisOffline(searchText);
     } else {
-      try {
-        final response = await http.post(
-          Uri.parse('${ApiConfig.apiUrl}/get-material'),
-          body: json
-              .encode({"codigo_empresa": '0001', "search_text": searchText}),
-          headers: {"Content-Type": "application/json"},
-        );
-
-        if (response.statusCode == 200) {
-          final responseData = json.decode(response.body);
-
-          // Salva a resposta no SharedPreferences
-          final SharedPreferences prefs = await SharedPreferences.getInstance();
-          await prefs.setString('materiais', json.encode(responseData));
-
-          return List<Map<String, dynamic>>.from(responseData);
-        } else {
-          print('Falha na requisição: ${response.statusCode}');
-          return _carregarMateriaisOffline(); // Fallback para dados offline
-        }
-      } catch (e) {
-        print('Erro ao fazer a requisição: $e');
-        return _carregarMateriaisOffline(); // Fallback para erro na requisição
-      }
+      return _fetchMaterialFromApi(searchText, cacheKey);
     }
   }
 
-  Future<List<Map<String, dynamic>>> _carregarMateriaisOffline() async {
+  Future<List<Map<String, dynamic>>> _fetchMaterialFromApi(
+      String searchText, String cacheKey) async {
+    try {
+      final response = await http.post(
+          Uri.parse('${ApiConfig.apiUrl}/get-material'),
+          body: json
+              .encode({"codigo_empresa": '0001', "search_text": searchText}),
+          headers: {"Content-Type": "application/json"});
+
+      print("API Response for $searchText: ${response.body}");
+      if (response.statusCode == 200) {
+        final responseData = json.decode(response.body);
+        final SharedPreferences prefs = await SharedPreferences.getInstance();
+        await prefs.setString(
+            cacheKey,
+            json.encode(
+                responseData)); // Salva a resposta usando a chave de cache específica
+        return List<Map<String, dynamic>>.from(responseData);
+      } else {
+        print('Falha na requisição: ${response.statusCode}');
+        return _carregarMateriaisOffline(
+            searchText); // Fallback para dados offline
+      }
+    } catch (e) {
+      print('Erro ao fazer a requisição: $e');
+      return _carregarMateriaisOffline(
+          searchText); // Fallback para erro na requisição
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> _carregarMateriaisOffline(
+      String searchText) async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     final String? materiaisString = prefs.getString('materiais');
 
     if (materiaisString != null) {
       final List<dynamic> materiaisJson = json.decode(materiaisString);
-      return materiaisJson.cast<Map<String, dynamic>>();
+      List<Map<String, dynamic>> allMaterials =
+          materiaisJson.cast<Map<String, dynamic>>();
+
+      if (searchText.isNotEmpty) {
+        allMaterials = allMaterials.where((material) {
+          // Add null safety check before calling toLowerCase
+          final nomeMaterial = material['descricao_produto'] as String?;
+          return nomeMaterial
+                  ?.toLowerCase()
+                  .contains(searchText.toLowerCase()) ??
+              false;
+        }).toList();
+      }
+
+      return allMaterials;
     } else {
-      return []; // Retorna uma lista vazia se não houver dados salvos
+      return []; // Returns an empty list if there are no saved data
     }
   }
 
   Future<List<Map<String, dynamic>>> _fetchCondOp(String searchText) async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    // Cria uma chave de cache específica para a pesquisa
+    String cacheKey =
+        'condOp_${searchText.replaceAll(RegExp('[^A-Za-z0-9]'), '')}';
+    var cachedData = prefs.getString(cacheKey);
+
+    if (cachedData != null) {
+      print("Using cached data for $searchText");
+      return List<Map<String, dynamic>>.from(json.decode(cachedData));
+    }
+
+    print("No cache found for $searchText. Checking connectivity.");
     var connectivityResult = await (Connectivity().checkConnectivity());
     if (connectivityResult == ConnectivityResult.none) {
-      // Carrega dados offline
-      return _carregarCondOpOffline();
+      print("Offline mode: No cached data available.");
+      return _carregarCondOpOffline(searchText);
     } else {
-      try {
-        final response = await http.post(
-          Uri.parse('${ApiConfig.apiUrl}/get-cond-op'),
-          body: json
-              .encode({"codigo_empresa": '0001', "search_text": searchText}),
-          headers: {"Content-Type": "application/json"},
-        );
-
-        if (response.statusCode == 200) {
-          final responseData = json.decode(response.body);
-
-          // Salva a resposta no SharedPreferences
-          final SharedPreferences prefs = await SharedPreferences.getInstance();
-          await prefs.setString('condOp', json.encode(responseData));
-
-          return List<Map<String, dynamic>>.from(responseData);
-        } else {
-          print('Falha na requisição: ${response.statusCode}');
-          return _carregarCondOpOffline(); // Fallback para dados offline
-        }
-      } catch (e) {
-        print('Erro ao fazer a requisição: $e');
-        return _carregarCondOpOffline(); // Fallback para erro na requisição
-      }
+      return _fetchCondOpFromApi(searchText, cacheKey);
     }
   }
 
-  Future<List<Map<String, dynamic>>> _carregarCondOpOffline() async {
+  Future<List<Map<String, dynamic>>> _fetchCondOpFromApi(
+      String searchText, String cacheKey) async {
+    try {
+      final response = await http.post(
+          Uri.parse('${ApiConfig.apiUrl}/get-cond-op'),
+          body: json
+              .encode({"codigo_empresa": '0001', "search_text": searchText}),
+          headers: {"Content-Type": "application/json"});
+
+      print("API Response for $searchText: ${response.body}");
+      if (response.statusCode == 200) {
+        final responseData = json.decode(response.body);
+        final SharedPreferences prefs = await SharedPreferences.getInstance();
+        await prefs.setString(
+            cacheKey,
+            json.encode(
+                responseData)); // Salva a resposta usando a chave de cache específica
+        return List<Map<String, dynamic>>.from(responseData);
+      } else {
+        print('Falha na requisição: ${response.statusCode}');
+        return _carregarCondOpOffline(
+            searchText); // Fallback para dados offline
+      }
+    } catch (e) {
+      print('Erro ao fazer a requisição: $e');
+      return _carregarCondOpOffline(
+          searchText); // Fallback para erro na requisição
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> _carregarCondOpOffline(
+      String searchText) async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     final String? condOpString = prefs.getString('condOp');
 
     if (condOpString != null) {
       final List<dynamic> condOpJson = json.decode(condOpString);
-      return condOpJson.cast<Map<String, dynamic>>();
+      List<Map<String, dynamic>> allConditions =
+          condOpJson.cast<Map<String, dynamic>>();
+
+      if (searchText.isNotEmpty) {
+        allConditions = allConditions.where((condition) {
+          // Add null safety check before calling toLowerCase
+          final descricao = condition['descricao'] as String?;
+          return descricao?.toLowerCase().contains(searchText.toLowerCase()) ??
+              false;
+        }).toList();
+      }
+
+      return allConditions;
     } else {
-      return []; // Retorna uma lista vazia se não houver dados salvos
+      return []; // Returns an empty list if there are no saved data
     }
   }
 
   Future<List<Map<String, dynamic>>> _fetchPeriodicidade(
       String searchText) async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    // Create a cache key that includes the searchText to differentiate caches
+    String cacheKey =
+        'periodicidade_${searchText.replaceAll(RegExp('[^A-Za-z0-9]'), '')}';
+    var cachedData = prefs.getString(cacheKey);
+
+    if (cachedData != null) {
+      print("Using cached data for $searchText");
+      return List<Map<String, dynamic>>.from(json.decode(cachedData));
+    }
+
+    print("No cache found for $searchText. Checking connectivity.");
     var connectivityResult = await (Connectivity().checkConnectivity());
     if (connectivityResult == ConnectivityResult.none) {
-      // Carrega dados offline
-      return _carregarPeriodicidadeOffline();
+      print("Offline mode: No cached data available.");
+      return _carregarPeriodicidadeOffline(searchText);
     } else {
-      try {
-        final response = await http.post(
-          Uri.parse('${ApiConfig.apiUrl}/get-frequencia'),
-          body: json
-              .encode({"codigo_empresa": '0001', "search_text": searchText}),
-          headers: {"Content-Type": "application/json"},
-        );
-
-        if (response.statusCode == 200) {
-          final responseData = json.decode(response.body);
-
-          // Salva a resposta no SharedPreferences
-          final SharedPreferences prefs = await SharedPreferences.getInstance();
-          await prefs.setString('periodicidade', json.encode(responseData));
-
-          return List<Map<String, dynamic>>.from(responseData);
-        } else {
-          print('Falha na requisição: ${response.statusCode}');
-          return _carregarPeriodicidadeOffline(); // Fallback para dados offline
-        }
-      } catch (e) {
-        print('Erro ao fazer a requisição: $e');
-        return _carregarPeriodicidadeOffline(); // Fallback para erro na requisição
-      }
+      return _fetchPeriodicidadeFromApi(searchText, cacheKey);
     }
   }
 
-  Future<List<Map<String, dynamic>>> _carregarPeriodicidadeOffline() async {
+  Future<List<Map<String, dynamic>>> _fetchPeriodicidadeFromApi(
+      String searchText, String cacheKey) async {
+    try {
+      final response = await http.post(
+          Uri.parse('${ApiConfig.apiUrl}/get-frequencia'),
+          body: json
+              .encode({"codigo_empresa": '0001', "search_text": searchText}),
+          headers: {"Content-Type": "application/json"});
+
+      print("API Response for $searchText: ${response.body}");
+      if (response.statusCode == 200) {
+        final responseData = json.decode(response.body);
+        final SharedPreferences prefs = await SharedPreferences.getInstance();
+        await prefs.setString(
+            cacheKey,
+            json.encode(
+                responseData)); // Save the response in SharedPreferences under the specific cache key
+        return List<Map<String, dynamic>>.from(responseData);
+      } else {
+        print('Failed request: ${response.statusCode}');
+        return _carregarPeriodicidadeOffline(
+            searchText); // Fallback to offline data
+      }
+    } catch (e) {
+      print('Error making the request: $e');
+      return _carregarPeriodicidadeOffline(
+          searchText); // Fallback to offline data on error
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> _carregarPeriodicidadeOffline(
+      String searchText) async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     final String? periodicidadeString = prefs.getString('periodicidade');
 
     if (periodicidadeString != null) {
       final List<dynamic> periodicidadeJson = json.decode(periodicidadeString);
-      return periodicidadeJson.cast<Map<String, dynamic>>();
+      List<Map<String, dynamic>> allPeriodicity =
+          periodicidadeJson.cast<Map<String, dynamic>>();
+
+      if (searchText.isNotEmpty) {
+        allPeriodicity = allPeriodicity.where((periodicity) {
+          // Add null safety check before calling toLowerCase
+          final descricao = periodicity['descricao'] as String?;
+          return descricao?.toLowerCase().contains(searchText.toLowerCase()) ??
+              false;
+        }).toList();
+      }
+
+      return allPeriodicity;
     } else {
-      return []; // Retorna uma lista vazia se não houver dados salvos
+      return []; // Returns an empty list if there are no saved data
     }
   }
 
@@ -381,41 +542,40 @@ class _CadPontosState extends State<CadPontos> {
           width: double.infinity,
           child: Column(children: [
             Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: TypeAheadField<Map<String, dynamic>>(
-                textFieldConfiguration: TextFieldConfiguration(
-                  controller: _componentController,
-                  enabled: userDataLoaded,
-                  decoration: const InputDecoration(
-                    labelText: 'Componente:',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                suggestionsCallback: (pattern) async {
-                  final suggestions = await _fetchComponets(
-                      pattern); // Faz a chamada à API com o texto de pesquisa
-                  return suggestions;
-                },
-                onSuggestionSelected: (suggestion) {
-                  setState(() {
-                    _componentController.text = suggestion['codigo'];
-                    _componentCodeController.text = suggestion['descricao'];
-                  });
-                },
-                itemBuilder: (context, Map<String, dynamic> suggestion) {
-                  // Renderize a sugestão aqui
-                  return ListTile(
-                    title: Text(suggestion['descricao'] ?? ''),
-                    subtitle: Row(
-                      children: [
-                        Text(suggestion['codigo'] ?? ''),
-                        const SizedBox(width: 10),
-                      ],
+                padding: const EdgeInsets.all(8.0),
+                child: TypeAheadField<Map<String, dynamic>>(
+                  textFieldConfiguration: TextFieldConfiguration(
+                    controller: _componentController,
+                    enabled: userDataLoaded,
+                    decoration: const InputDecoration(
+                      labelText: 'Componente:',
+                      border: OutlineInputBorder(),
                     ),
-                  );
-                },
-              ),
-            ),
+                  ),
+                  suggestionsCallback: (pattern) async {
+                    // Aqui faz a chamada ao método que possivelmente utiliza cache
+                    final suggestions = await _fetchComponents(pattern);
+                    return suggestions;
+                  },
+                  onSuggestionSelected: (suggestion) {
+                    setState(() {
+                      _componentController.text = suggestion['codigo'];
+                      _componentCodeController.text = suggestion['descricao'];
+                    });
+                  },
+                  itemBuilder: (context, Map<String, dynamic> suggestion) {
+                    // Renderiza a sugestão aqui
+                    return ListTile(
+                      title: Text(suggestion['descricao'] ?? ''),
+                      subtitle: Row(
+                        children: [
+                          Text(suggestion['codigo'] ?? ''),
+                          const SizedBox(width: 10),
+                        ],
+                      ),
+                    );
+                  },
+                )),
             Padding(
               padding: const EdgeInsets.all(8.0),
               child: TextField(
@@ -583,6 +743,16 @@ class _CadPontosState extends State<CadPontos> {
             Padding(
               padding: const EdgeInsets.all(8.0),
               child: TextField(
+                controller: _tempoAtvController,
+                decoration: const InputDecoration(
+                  border: OutlineInputBorder(),
+                  labelText: 'Tempo da atividade: ',
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: TextField(
                 controller: _qtyPessoasController,
                 decoration: const InputDecoration(
                   border: OutlineInputBorder(),
@@ -608,7 +778,7 @@ class _CadPontosState extends State<CadPontos> {
                         ),
                       ),
                       onPressed: () {
-                         Navigator.of(context).pop();
+                        Navigator.of(context).pop();
                       },
                       child: const Text('Cancelar'),
                     ),

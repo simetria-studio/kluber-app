@@ -94,6 +94,7 @@ class DatabaseHelper {
     cond_op_codigo TEXT,
     period_name TEXT,
     period_codigo TEXT,
+    tempo_atv TEXT NULL,
     qty_pessoas TEXT,
     plano_id INTEGER,
     conjunto_equip_id INTEGER,

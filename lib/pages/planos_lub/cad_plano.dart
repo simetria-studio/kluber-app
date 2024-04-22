@@ -50,7 +50,6 @@ class _CadPlanoLubState extends State<CadPlanoLub> {
   }
 
   Future<int> salvarDados() async {
-    print(gerarCodigoMobile());
     try {
       // Captura os valores dos controllers
       String cliente = _clienteController.text;
@@ -93,7 +92,7 @@ class _CadPlanoLubState extends State<CadPlanoLub> {
   @override
   void initState() {
     super.initState();
-    _carregarClientesOffline().then((clientesLocais) {
+    _carregarClientesOffline('').then((clientesLocais) {
       if (clientesLocais.isNotEmpty) {
         // Atualizar a UI com os dados locais
         setState(() {
@@ -104,8 +103,6 @@ class _CadPlanoLubState extends State<CadPlanoLub> {
         _fetchClientes('');
       }
     });
-
-
 
     initializeData();
     _initializeDatabase();
@@ -142,14 +139,32 @@ class _CadPlanoLubState extends State<CadPlanoLub> {
     }
   }
 
-  Future<List<Map<String, dynamic>>> _carregarClientesOffline() async {
+  Future<List<Map<String, dynamic>>> _carregarClientesOffline(
+      String searchText) async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     final String? clientesString = prefs.getString('clientes');
     List<Map<String, dynamic>> allClients = [];
 
     if (clientesString != null) {
       final List<dynamic> clientesJson = json.decode(clientesString);
-      allClients = clientesJson.cast<Map<String, dynamic>>();
+      List<Map<String, dynamic>> filteredClients =
+          clientesJson.cast<Map<String, dynamic>>();
+
+      if (searchText.isNotEmpty) {
+        filteredClients = filteredClients.where((client) {
+          // Adding null checks before calling toLowerCase
+          final razaoSocial = client['razao_social'] as String?;
+          final cidade = client['cidade'] as String?;
+          return (razaoSocial
+                      ?.toLowerCase()
+                      .contains(searchText.toLowerCase()) ??
+                  false) ||
+              (cidade?.toLowerCase().contains(searchText.toLowerCase()) ??
+                  false);
+        }).toList();
+      }
+
+      allClients = filteredClients;
     }
 
     return allClients;
@@ -158,8 +173,7 @@ class _CadPlanoLubState extends State<CadPlanoLub> {
   Future<List<Map<String, dynamic>>> _fetchClientes(String searchText) async {
     final connectivityResult = await (Connectivity().checkConnectivity());
     if (connectivityResult == ConnectivityResult.none) {
-      print('Sem conexão com a internet');
-      return _carregarClientesOffline();
+      return _carregarClientesOffline(searchText);
     } else {
       try {
         final response = await http.post(
@@ -178,14 +192,17 @@ class _CadPlanoLubState extends State<CadPlanoLub> {
           return List<Map<String, dynamic>>.from(responseData);
         } else {
           print('Falha na requisição: ${response.statusCode}');
-          return _carregarClientesOffline(); // Fallback para dados offline
+          return _carregarClientesOffline(
+              searchText); // Fallback para dados offline
         }
       } on TimeoutException catch (_) {
         print('A requisição excedeu o tempo limite');
-        return _carregarClientesOffline(); // Fallback para dados offline
+        return _carregarClientesOffline(
+            searchText); // Fallback para dados offline
       } catch (e) {
         print('Erro ao fazer a requisição: $e');
-        return _carregarClientesOffline(); // Outro erro, use o fallback
+        return _carregarClientesOffline(
+            searchText); // Outro erro, use o fallback
       }
     }
   }
@@ -236,6 +253,16 @@ class _CadPlanoLubState extends State<CadPlanoLub> {
           usuariosJson.cast<Map<String, dynamic>>();
 
       // Filtra os usuários com base no searchText, assumindo que 'nome_usuario' é o campo relevante
+      if (searchText.isNotEmpty) {
+        allUsers = allUsers.where((user) {
+          return (user['nome_usuario']
+                  .toLowerCase()
+                  .contains(searchText.toLowerCase()) ||
+              user['nome_usuario_completo']
+                  .toLowerCase()
+                  .contains(searchText.toLowerCase()));
+        }).toList();
+      }
 
       return allUsers;
     } else {

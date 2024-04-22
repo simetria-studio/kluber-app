@@ -1177,11 +1177,12 @@ class _AreaState extends State<Arvore> {
                                                                                             children: [
                                                                                               ElevatedButton(
                                                                                                 onPressed: () {
+                                                                                                  print(linha.id);
                                                                                                   Navigator.push(
                                                                                                     context,
                                                                                                     MaterialPageRoute(
                                                                                                       builder: (context) => CadConjEqui(
-                                                                                                          motorId: linha.id, // Alteração aqui
+                                                                                                          motorId: tagMaquina.id, // Alteração aqui
                                                                                                           planoId: id),
                                                                                                     ),
                                                                                                   );

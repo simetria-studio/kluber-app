@@ -40,6 +40,7 @@ class _CadConjEquiState extends State<CadConjEqui> {
   @override
   void initState() {
     super.initState();
+    print(widget.motorId); // Verifica se o ID do plano foi passado corretamente
     _carregarDadosDoPlano().then((plano) {
       setState(() {
         id = plano['id'];
@@ -164,7 +165,7 @@ class _CadConjEquiState extends State<CadConjEqui> {
                       ),
                     ),
                     onPressed: () {
-                       Navigator.of(context).pop();
+                      Navigator.of(context).pop();
                     },
                     child: const Text('Cancelar'),
                   ),
