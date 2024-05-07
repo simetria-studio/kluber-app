@@ -63,16 +63,18 @@ class _AreaState extends State<Arvore> {
     _carregarAreas();
   }
 
-  Future<void> duplicarTagEMaquina(int tagMaquinaId) async {
+  Future<void> duplicarTagEMaquina(int linhaId, int tagMaquinaId) async {
     final Database db = await databaseHelper.database;
     // Passo 2.1: Recuperar a tag de máquina original
     var tagMaquina = await db
         .query('tag_maquina', where: 'id = ?', whereArgs: [tagMaquinaId]);
+
     if (tagMaquina.isNotEmpty) {
-      // Passo 2.2: Duplicar a tag de máquina
       var novaTagId = await db.insert('tag_maquina', {
         ...tagMaquina.first,
-        "id": null // Remover ID para garantir que um novo seja gerado
+        "id": null, // Remover o ID original para que um novo seja gerado
+        "tag_nome": "${tagMaquina.first['tag_nome']}",
+        "maquina_nome": "${tagMaquina.first['maquina_nome']}"
       });
 
       // Passo 2.3: Recuperar e duplicar os conjuntos de equipamentos associados
@@ -137,9 +139,7 @@ class _AreaState extends State<Arvore> {
   }
 
   Future<void> _excluirConEquip(int areaId) async {
-    // Chama o método para excluir a área do banco de dados
     await databaseHelper.excluirConjEquip(areaId);
-    // Atualiza a lista de áreas após a exclusão
     await _carregarDados();
   }
 
@@ -1013,6 +1013,7 @@ class _AreaState extends State<Arvore> {
                                                                                             onPressed: () {
                                                                                               _excluirLinha(linha.id); // Chama o método de exclusão
                                                                                               Navigator.of(context).pop(); // Fecha o diálogo de confirmação
+                                                                                              Navigator.of(context).pop(); // Fecha o diálogo de confirmação
                                                                                             },
                                                                                             child: const Text("Confirmar"),
                                                                                           ),
@@ -1197,13 +1198,14 @@ class _AreaState extends State<Arvore> {
                                                                                               ),
                                                                                               ElevatedButton(
                                                                                                 onPressed: () async {
-                                                                                                  await duplicarTagEMaquina(linha.id); // Supondo que este método já esteja implementado e funcione corretamente
+                                                                                                  print(linha.id);
+                                                                                                  await duplicarTagEMaquina(linha.id, tagMaquina.id); // Supondo que este método já esteja implementado e funcione corretamente
 
-                                                                                                  setState(() async {
-                                                                                                    await _carregarDados(); // Isso recarrega todos os dados e atualiza a UI
-                                                                                                    Navigator.of(context).pop();
-                                                                                                    // Isso vai forçar a reconstrução do widget com os dados atualizados.
+                                                                                                  setState(() {
+                                                                                                    // Nenhuma atualização de estado é necessária aqui
                                                                                                   });
+                                                                                                  await _carregarDados(); // Isso recarrega todos os dados e atualiza a UI
+                                                                                                  Navigator.of(context).pop();
                                                                                                 },
 
                                                                                                 child: const Text(
@@ -1305,9 +1307,11 @@ class _AreaState extends State<Arvore> {
 
                                                                                                                     // Copiar tag_maquina
                                                                                                                     Map<String, dynamic> novaTagMaquinaData = {
+                                                                                                                      'id': null, // Remover o ID original para que um novo seja gerado
                                                                                                                       'tag_nome': tagMaquina.tagNome,
                                                                                                                       'maquina_nome': tagMaquina.maquinaNome,
                                                                                                                       'linha_id': selectedLinhaId,
+                                                                                                                      'plano_id': id, // Alteração aqui
                                                                                                                     };
 
                                                                                                                     final int novaTagMaquinaId = await databaseHelper.insertTag(novaTagMaquinaData);
@@ -1318,9 +1322,11 @@ class _AreaState extends State<Arvore> {
 
                                                                                                                       for (var conjunto in conjuntosExistentes) {
                                                                                                                         Map<String, dynamic> novoConjuntoEquipData = {
+                                                                                                                          'id': null, // Remover o ID original para que um novo seja gerado
                                                                                                                           'conj_nome': conjunto['conj_nome'],
                                                                                                                           'equi_nome': conjunto['equi_nome'],
                                                                                                                           'tag_maquina_id': novaTagMaquinaId,
+                                                                                                                          'plano_id': id, // Alteração aqui
                                                                                                                         };
 
                                                                                                                         final int novoConjuntoEquipId = await databaseHelper.insertConjuntoAndEquip(novoConjuntoEquipData);
@@ -1337,7 +1343,8 @@ class _AreaState extends State<Arvore> {
                                                                                                                             await databaseHelper.insertPontos({
                                                                                                                               ...ponto,
                                                                                                                               'id': null, // Remover o ID original para que um novo seja gerado
-                                                                                                                              'conjunto_equip_id': novoConjuntoEquipId, // Atribuir novoConjuntoEquipId como o conjunto_equip_id para os pontos duplicados
+                                                                                                                              'conjunto_equip_id': novoConjuntoEquipId,
+                                                                                                                              // Atribuir novoConjuntoEquipId como o conjunto_equip_id para os pontos duplicados
                                                                                                                             });
                                                                                                                           }
                                                                                                                         }
@@ -1614,7 +1621,7 @@ class _AreaState extends State<Arvore> {
                                                                                                         ),
                                                                                                         TextButton(
                                                                                                           onPressed: () {
-                                                                                                            // Confirma a exclusão
+                                                                                                            print(conjuntoEquip.id);
                                                                                                             _excluirConEquip(conjuntoEquip.id); // Chama o método de exclusão
                                                                                                             Navigator.of(context).pop(); // Fecha o diálogo de confirmação
                                                                                                             Navigator.of(context).pop(); // Fecha a tela atual

@@ -119,15 +119,27 @@ class _PlanosState extends State<Planos> {
             ),
             onPressed: () async {
               final sincronizador = Sincronizador();
-              final result = await sincronizador.sincronizarDados();
-              if (result) {
-                setState(() {
-                  _loadPlanos();
-                });
+              try {
+                final result = await sincronizador.sincronizarDados();
+
+                if (result) {
+                  await Future.delayed(
+                      const Duration(seconds: 2)); // Atraso de 2 segundos
+                  setState(() {
+                    _loadPlanos();
+                  });
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Dados sincronizados com sucesso!'),
+                      duration: Duration(seconds: 2),
+                    ),
+                  );
+                }
+              } catch (e) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Dados sincronizados com sucesso!'),
-                    duration: Duration(seconds: 2),
+                  SnackBar(
+                    content: Text('Erro ao sincronizar dados: $e'),
+                    duration: const Duration(seconds: 2),
                   ),
                 );
               }

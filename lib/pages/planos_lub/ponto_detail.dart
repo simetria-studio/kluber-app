@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:kluber/class/color_config.dart';
+import 'package:kluber/class/float_buttom.dart';
 import 'package:kluber/db/database.dart';
+import 'package:kluber/pages/homepage.dart';
+import 'package:kluber/pages/planos_lub/arvore.dart';
+import 'package:kluber/pages/planos_lub/edit_ponto.dart';
 // import 'package:flutter_icons/flutter_icons.dart'; // Certifique-se de adicionar este pacote ao seu pubspec.yaml
 
 class PontoDetail extends StatefulWidget {
   final int id;
+
   const PontoDetail({Key? key, required this.id}) : super(key: key);
 
   @override
@@ -64,6 +69,70 @@ class _PontoDetailState extends State<PontoDetail> {
                             fontSize: 24, fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 20),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: <Widget>[
+                          ElevatedButton(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (context) => EditPonto(
+                                        pontoId: _pontoDetails![
+                                            'id']) // Alteração aqu),
+                                    ),
+                              );
+                            },
+                            style: ElevatedButton.styleFrom(
+                                foregroundColor: Colors.black,
+                                backgroundColor: ColorConfig.amarelo),
+                            child: const Text('Editar'),
+                          ),
+                          ElevatedButton(
+                            onPressed: () {
+                              showDialog(
+                                context: context,
+                                builder: (context) {
+                                  return AlertDialog(
+                                    title: const Text('Deletar Ponto'),
+                                    content: const Text(
+                                        'Tem certeza que deseja deletar este ponto?'),
+                                    actions: <Widget>[
+                                      TextButton(
+                                        onPressed: () {
+                                          Navigator.pop(context);
+                                        },
+                                        child: const Text('Cancelar'),
+                                      ),
+                                      TextButton(
+                                        onPressed: () {
+                                          _databaseHelper.excluirPonto(
+                                              _pontoDetails!['id']);
+                                          Navigator.pop(context);
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (context) =>
+                                                  const HomePage(),
+                                            ),
+                                          );
+                                        },
+                                        child: const Text('Deletar'),
+                                      ),
+                                    ],
+                                  );
+                                },
+                              );
+                            },
+                            style: ElevatedButton.styleFrom(
+                                foregroundColor: ColorConfig.amarelo,
+                                backgroundColor:
+                                    const Color.fromARGB(255, 0, 0, 0)),
+                            child: const Text('Deletar'),
+                          ),
+                        ],
+                      ),
+
                       const Divider(),
                       _buildDetailItem(
                           'ID', _pontoDetails!['id'].toString(), Icons.vpn_key),
@@ -81,8 +150,8 @@ class _PontoDetailState extends State<PontoDetail> {
                           _pontoDetails!['atv_breve_codigo'], Icons.code_off),
                       _buildDetailItem(
                           'Material', _pontoDetails!['lub_name'], Icons.layers),
-                      _buildDetailItem('Código do material',
-                          _pontoDetails!['lub_codigo'], Icons.code),
+                      _buildDetailItem('Tempo de atividade',
+                          _pontoDetails!['tempo_atv'], Icons.lock_clock),
                       _buildDetailItem(
                           'Quantidade de material',
                           _pontoDetails!['qty_material'].toString(),
@@ -111,6 +180,11 @@ class _PontoDetailState extends State<PontoDetail> {
               ),
             )
           : const Center(child: CircularProgressIndicator()),
+      floatingActionButton: FloatBtn.build(
+          context), // Chama o FloatingActionButton da classe FloatBtn
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+      bottomNavigationBar: FloatBtn.bottomAppBar(
+          context), // Chama o BottomAppBar da classe FloatBtn
     );
   }
 }

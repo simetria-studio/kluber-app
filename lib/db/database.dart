@@ -478,114 +478,58 @@ class DatabaseHelper {
   Future<void> excluirTagEquip(int areaId) async {
     final db = await database;
 
-    // Primeiro, encontre todas as subáreas relacionadas à área
-    List<Map<String, dynamic>> subareas = await db.query(
-      'subarea',
-      where: 'area_id = ?',
+    // Para cada tag de máquina, encontre e exclua todos os conjuntos de equipamentos relacionados
+
+    List<Map<String, dynamic>> tagsMaquinas = await db.query(
+      'tag_maquina',
+      where: 'id = ?',
       whereArgs: [areaId],
     );
 
-    // Para cada subárea, encontre e exclua todas as linhas relacionadas
-    for (var subarea in subareas) {
-      int subareaId = subarea['id'];
+    for (var tagMaquina in tagsMaquinas) {
+      int tagMaquinaId = tagMaquina['id'];
 
-      List<Map<String, dynamic>> linhas = await db.query(
-        'linha',
-        where: 'subarea_id = ?',
-        whereArgs: [subareaId],
+      await db.delete(
+        'pontos',
+        where:
+            'conjunto_equip_id IN (SELECT id FROM conjunto_equip WHERE tag_maquina_id = ?)',
+        whereArgs: [tagMaquinaId],
       );
 
-      // Para cada linha, encontre e exclua todas as tags de máquinas relacionadas
-      for (var linha in linhas) {
-        int linhaId = linha['id'];
+      // Excluir os conjuntos de equipamentos
+      await db.delete(
+        'conjunto_equip',
+        where: 'tag_maquina_id = ?',
+        whereArgs: [tagMaquinaId],
+      );
 
-        List<Map<String, dynamic>> tagsMaquinas = await db.query(
-          'tag_maquina',
-          where: 'linha_id = ?',
-          whereArgs: [linhaId],
-        );
-
-        // Para cada tag de máquina, encontre e exclua todos os conjuntos de equipamentos relacionados
-        for (var tagMaquina in tagsMaquinas) {
-          int tagMaquinaId = tagMaquina['id'];
-
-          // Excluir os pontos associados a cada conjunto de equipamento
-          await db.delete(
-            'pontos',
-            where:
-                'conjunto_equip_id IN (SELECT id FROM conjunto_equip WHERE tag_maquina_id = ?)',
-            whereArgs: [tagMaquinaId],
-          );
-
-          // Excluir os conjuntos de equipamentos
-          await db.delete(
-            'conjunto_equip',
-            where: 'tag_maquina_id = ?',
-            whereArgs: [tagMaquinaId],
-          );
-
-          // Excluir a tag da máquina
-          await db.delete(
-            'tag_maquina',
-            where: 'id = ?',
-            whereArgs: [tagMaquinaId],
-          );
-        }
-      }
+      // Excluir a tag da máquina
+      await db.delete(
+        'tag_maquina',
+        where: 'id = ?',
+        whereArgs: [tagMaquinaId],
+      );
     }
   }
 
   Future<void> excluirConjEquip(int areaId) async {
-    final db = await database;
+    // Abra o banco de dados
+    final Database db = await database;
 
-    // Primeiro, encontre todas as subáreas relacionadas à área
-    List<Map<String, dynamic>> subareas = await db.query(
-      'subarea',
-      where: 'area_id = ?',
-      whereArgs: [areaId],
+    // Excluir os pontos relacionados à área
+    await db.delete(
+      'pontos', // Substitua 'pontos' pelo nome da tabela dos pontos
+      where:
+          'conjunto_equip_id = ?', // Condição para encontrar os pontos da área específica
+      whereArgs: [areaId], // Argumento a ser substituído na condição WHERE
     );
 
-    // Para cada subárea, encontre e exclua todas as linhas relacionadas
-    for (var subarea in subareas) {
-      int subareaId = subarea['id'];
-
-      List<Map<String, dynamic>> linhas = await db.query(
-        'linha',
-        where: 'subarea_id = ?',
-        whereArgs: [subareaId],
-      );
-
-      // Para cada linha, encontre e exclua todas as tags de máquinas relacionadas
-      for (var linha in linhas) {
-        int linhaId = linha['id'];
-
-        List<Map<String, dynamic>> tagsMaquinas = await db.query(
-          'tag_maquina',
-          where: 'linha_id = ?',
-          whereArgs: [linhaId],
-        );
-
-        // Para cada tag de máquina, encontre e exclua todos os conjuntos de equipamentos relacionados
-        for (var tagMaquina in tagsMaquinas) {
-          int tagMaquinaId = tagMaquina['id'];
-
-          // Excluir os pontos associados a cada conjunto de equipamento
-          await db.delete(
-            'pontos',
-            where:
-                'conjunto_equip_id IN (SELECT id FROM conjunto_equip WHERE tag_maquina_id = ?)',
-            whereArgs: [tagMaquinaId],
-          );
-
-          // Excluir os conjuntos de equipamentos
-          await db.delete(
-            'conjunto_equip',
-            where: 'tag_maquina_id = ?',
-            whereArgs: [tagMaquinaId],
-          );
-        }
-      }
-    }
+    // Excluir a área
+    await db.delete(
+      'conjunto_equip', // Substitua 'tag_maquina' pelo nome da tabela de áreas
+      where: 'id = ?', // Condição para encontrar a área específica
+      whereArgs: [areaId], // Argumento a ser substituído na condição WHERE
+    );
   }
 
   Future<int> updatePlanoLub(int id, Map<String, dynamic> planoData) async {
@@ -732,6 +676,25 @@ class DatabaseHelper {
     );
   }
 
+  Future<void> updatePonto(Map<String, dynamic> areaData) async {
+    final db = await database;
+    await db.update(
+      'pontos',
+      areaData,
+      where: 'id = ?',
+      whereArgs: [areaData['id']],
+    );
+  }
+
+  Future<void> excluirPonto(int pontoId) async {
+    final db = await database;
+    await db.delete(
+      'pontos',
+      where: 'id = ?',
+      whereArgs: [pontoId],
+    );
+  }
+
 // Define outras classes de modelo para Subarea, Linha, TagMaquina, ConjuntoEquip, e Pontos aqui
   Future<List<Planolub>> getPlanolubCompleto() async {
     final db = await _initDatabase();
@@ -791,6 +754,7 @@ class DatabaseHelper {
                     qtyMaterial: ponto['qty_material'],
                     condOpName: ponto['cond_op_name'],
                     condOpCodigo: ponto['cond_op_codigo'],
+                    tempoAtv: ponto['tempo_atv'],
                     periodName: ponto['period_name'],
                     periodCodigo: ponto['period_codigo'],
                     qtyPessoas: ponto['qty_pessoas'],
@@ -856,6 +820,7 @@ class DatabaseHelper {
         areas: areas,
       ));
     }
+    print(planolubs);
 
     return planolubs;
   }
@@ -1046,6 +1011,7 @@ class Pontos {
   String periodName;
   String periodCodigo;
   String qtyPessoas;
+  String tempoAtv;
   int planoId;
   int conjuntoEquipId;
 
@@ -1064,6 +1030,7 @@ class Pontos {
     required this.periodName,
     required this.periodCodigo,
     required this.qtyPessoas,
+    required this.tempoAtv,
     required this.planoId,
     required this.conjuntoEquipId,
   });
@@ -1083,6 +1050,7 @@ class Pontos {
       'cond_op_codigo': condOpCodigo,
       'period_name': periodName,
       'period_codigo': periodCodigo,
+      'tempo_atv': tempoAtv,
       'qty_pessoas': qtyPessoas,
       'plano_id': planoId,
       'conjunto_equip_id': conjuntoEquipId,
@@ -1102,6 +1070,7 @@ class Pontos {
       qtyMaterial: ponto['qty_material'],
       condOpName: ponto['cond_op_name'],
       condOpCodigo: ponto['cond_op_codigo'],
+      tempoAtv: ponto['tempo_atv'],
       periodName: ponto['period_name'],
       periodCodigo: ponto['period_codigo'],
       qtyPessoas: ponto['qty_pessoas'],

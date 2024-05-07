@@ -1,7 +1,7 @@
 name: kluber
 description: "A new Flutter project."
 publish_to: 'none'
-version: 1.0.0+33
+version: 1.0.0+37
 
 environment:
   sdk: '>=3.2.5 <4.0.0'

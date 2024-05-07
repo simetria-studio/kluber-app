@@ -8,7 +8,7 @@ class Sincronizador {
     var dbHelper = DatabaseHelper();
     var dadosParaSincronizar = await dbHelper.getPlanolubCompleto();
     String url = '${ApiConfig.apiUrl}/sync-plan';
-    print(dadosParaSincronizar);
+    // print(dadosParaSincronizar);
     try {
       final response = await http.post(
         Uri.parse(url),
