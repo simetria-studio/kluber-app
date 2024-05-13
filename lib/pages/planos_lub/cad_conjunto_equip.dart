@@ -6,7 +6,9 @@ import 'package:kluber/pages/planos_lub/arvore.dart';
 class CadConjEqui extends StatefulWidget {
   final int motorId;
   final int planoId;
-  const CadConjEqui({super.key, required this.motorId, required this.planoId});
+  final int? idArea;
+  const CadConjEqui(
+      {super.key, required this.motorId, required this.planoId, this.idArea});
 
   @override
   State<CadConjEqui> createState() => _CadConjEquiState();
@@ -187,7 +189,10 @@ class _CadConjEquiState extends State<CadConjEqui> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => Arvore(idPlano: id),
+                            builder: (context) => Arvore(
+                              idPlano: id,
+                              idArea: widget.idArea,
+                            ),
                           ),
                         );
                       }

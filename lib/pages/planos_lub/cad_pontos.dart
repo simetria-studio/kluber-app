@@ -13,7 +13,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 class CadPontos extends StatefulWidget {
   final int conjuntoId;
   final int idPlano;
-  const CadPontos({super.key, required this.conjuntoId, required this.idPlano});
+  final int idArea;
+  const CadPontos(
+      {super.key,
+      required this.conjuntoId,
+      required this.idPlano,
+      required this.idArea});
 
   @override
   State<CadPontos> createState() => _CadPontosState();
@@ -21,6 +26,12 @@ class CadPontos extends StatefulWidget {
 
 class _CadPontosState extends State<CadPontos> {
   bool userDataLoaded = false;
+  bool _isComponentSelected = false;
+  bool _isAtvBreveSelected = false;
+  bool _isMaterialSelected = false;
+  bool _isCondOpSelected = false;
+  bool _isPeriodicidadeSelected = false;
+
   final DatabaseHelper _databaseHelper = DatabaseHelper();
   final TextEditingController _componentController = TextEditingController();
   final TextEditingController _componentCodeController =
@@ -39,6 +50,7 @@ class _CadPontosState extends State<CadPontos> {
       TextEditingController();
   final TextEditingController _qtyPessoasController = TextEditingController();
   final TextEditingController _tempoAtvController = TextEditingController();
+  late List<Map<String, dynamic>> _clientes;
   String cliente = '';
   String dataCadastro = '';
   String dataRevisao = '';
@@ -64,6 +76,42 @@ class _CadPontosState extends State<CadPontos> {
   void initState() {
     super.initState();
     initializeData();
+    _componentController.addListener(() {
+      if (_componentController.text != _componentCodeController.text) {
+        setState(() {
+          _isComponentSelected = false;
+        });
+      }
+    });
+    _atvBreveController.addListener(() {
+      if (_atvBreveController.text != _atvBreveCodeController.text) {
+        setState(() {
+          _isAtvBreveSelected = false;
+        });
+      }
+    });
+    _materialController.addListener(() {
+      if (_materialController.text != _materialCodeController.text) {
+        setState(() {
+          _isMaterialSelected = false;
+        });
+      }
+    });
+    _condOpController.addListener(() {
+      if (_condOpController.text != _condOpCodeController.text) {
+        setState(() {
+          _isCondOpSelected = false;
+        });
+      }
+    });
+    _periodicidadeController.addListener(() {
+      if (_periodicidadeController.text != _periodicidadeCodeController.text) {
+        setState(() {
+          _isPeriodicidadeSelected = false;
+        });
+      }
+    });
+
     _carregarDadosDoPlano().then((plano) {
       setState(() {
         id = plano['id'];
@@ -561,6 +609,7 @@ class _CadPontosState extends State<CadPontos> {
                     setState(() {
                       _componentController.text = suggestion['codigo'];
                       _componentCodeController.text = suggestion['descricao'];
+                      _isComponentSelected = true;
                     });
                   },
                   itemBuilder: (context, Map<String, dynamic> suggestion) {
@@ -606,6 +655,7 @@ class _CadPontosState extends State<CadPontos> {
                   setState(() {
                     _atvBreveController.text = suggestion['descricao'];
                     _atvBreveCodeController.text = suggestion['codigo'];
+                    _isAtvBreveSelected = true;
                   });
                 },
                 itemBuilder: (context, Map<String, dynamic> suggestion) {
@@ -642,6 +692,7 @@ class _CadPontosState extends State<CadPontos> {
                   setState(() {
                     _materialController.text = suggestion['descricao_produto'];
                     _materialCodeController.text = suggestion['codigo_produto'];
+                    _isMaterialSelected = true;
                   });
                 },
                 itemBuilder: (context, Map<String, dynamic> suggestion) {
@@ -688,6 +739,7 @@ class _CadPontosState extends State<CadPontos> {
                   setState(() {
                     _condOpController.text = suggestion['descricao'];
                     _condOpCodeController.text = suggestion['codigo'];
+                    _isCondOpSelected = true;
                   });
                 },
                 itemBuilder: (context, Map<String, dynamic> suggestion) {
@@ -724,6 +776,7 @@ class _CadPontosState extends State<CadPontos> {
                   setState(() {
                     _periodicidadeController.text = suggestion['descricao'];
                     _periodicidadeCodeController.text = suggestion['codigo'];
+                    _isPeriodicidadeSelected = true;
                   });
                 },
                 itemBuilder: (context, Map<String, dynamic> suggestion) {
@@ -795,15 +848,38 @@ class _CadPontosState extends State<CadPontos> {
                         ),
                       ),
                       onPressed: () async {
-                        int idPlano = await salvarDados();
-                        if (idPlano != -1) {
-                          print(id);
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => Arvore(idPlano: id),
+                        if (!_isComponentSelected ||
+                            !_isAtvBreveSelected ||
+                            !_isMaterialSelected ||
+                            !_isCondOpSelected ||
+                            !_isPeriodicidadeSelected) {
+                          // Show an error message or alert dialog
+                          showDialog(
+                            context: context,
+                            builder: (context) => AlertDialog(
+                              title: const Text("Error"),
+                              content: const Text(
+                                  "Por favor, selecione os valores."),
+                              actions: <Widget>[
+                                TextButton(
+                                  onPressed: () => Navigator.of(context).pop(),
+                                  child: const Text("OK"),
+                                ),
+                              ],
                             ),
                           );
+                        } else {
+                          int idPlano = await salvarDados();
+                          if (idPlano != -1) {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => Arvore(
+                                    idPlano: widget.idPlano,
+                                    idArea: widget.idArea),
+                              ),
+                            );
+                          }
                         }
                       },
                       child: const Text('Salvar'),

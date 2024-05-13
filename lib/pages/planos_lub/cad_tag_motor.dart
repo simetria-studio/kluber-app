@@ -7,7 +7,9 @@ import 'package:kluber/pages/planos_lub/arvore.dart';
 class CadTagMotor extends StatefulWidget {
   final int linhaId;
   final int planoId;
-  const CadTagMotor({super.key, required this.linhaId, required this.planoId});
+  final int? idArea;
+  const CadTagMotor(
+      {super.key, required this.linhaId, required this.planoId, this.idArea});
 
   @override
   State<CadTagMotor> createState() => _CadTagMotorState();
@@ -187,7 +189,8 @@ class _CadTagMotorState extends State<CadTagMotor> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => Arvore(idPlano: id),
+                            builder: (context) =>
+                                Arvore(idPlano: id, idArea: widget.idArea),
                           ),
                         );
                       }

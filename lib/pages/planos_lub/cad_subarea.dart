@@ -6,7 +6,9 @@ import 'package:kluber/pages/planos_lub/arvore.dart';
 class CadSubArea extends StatefulWidget {
   final int areaId;
   final int idPlano;
-  const CadSubArea({super.key, required this.areaId, required this.idPlano});
+  final int? idArea;
+  const CadSubArea(
+      {super.key, required this.areaId, required this.idPlano, this.idArea});
 
   @override
   State<CadSubArea> createState() => _CadSubAreaState();
@@ -173,7 +175,8 @@ class _CadSubAreaState extends State<CadSubArea> {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => Arvore(idPlano: id),
+                              builder: (context) =>
+                                  Arvore(idPlano: id, idArea: widget.idArea),
                             ),
                           );
                         }

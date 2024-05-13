@@ -18,8 +18,9 @@ import 'package:sqflite/sqflite.dart';
 
 class Arvore extends StatefulWidget {
   final int idPlano;
-
-  const Arvore({Key? key, required this.idPlano}) : super(key: key);
+  final int? idArea;
+  const Arvore({Key? key, required this.idPlano, this.idArea})
+      : super(key: key);
 
   @override
   State<Arvore> createState() => _AreaState();
@@ -27,13 +28,14 @@ class Arvore extends StatefulWidget {
 
 class _AreaState extends State<Arvore> {
   List<AreaModel> areas = []; // Alteração aqui
-
   String cliente = '';
   String dataCadastro = '';
   String dataRevisao = '';
   String responsavelLubrificacao = '';
   String responsavelKluber = '';
   int id = 0;
+  int idArea = 0;
+  bool areaVisible = false;
   final databaseHelper = DatabaseHelper();
   final DatabaseHelper _databaseHelper = DatabaseHelper();
 
@@ -52,13 +54,16 @@ class _AreaState extends State<Arvore> {
     // Aqui buscamos as áreas associadas ao plano e elas já vêm com as subáreas e linhas corretamente formatadas
     var areasResult = await getAreasByPlanoId(widget.idPlano);
     setState(() {
+      print(idArea); // Alteração aqui
       areas = areasResult;
+      areas[idArea].isVisible = true;
     });
   }
 
   @override
   void initState() {
     super.initState();
+    idArea = widget.idArea ?? 0;
     _carregarDados();
     _carregarAreas();
   }
@@ -476,9 +481,11 @@ class _AreaState extends State<Arvore> {
                                                           MaterialPageRoute(
                                                             builder: (context) =>
                                                                 CadSubArea(
-                                                                    areaId: areas[
-                                                                            index]
-                                                                        .id, // Alteração aqui
+                                                                    areaId:
+                                                                        areas[index]
+                                                                            .id,
+                                                                    idArea:
+                                                                        index, // Alteração aqui
                                                                     idPlano:
                                                                         id),
                                                           ),
@@ -744,7 +751,8 @@ class _AreaState extends State<Arvore> {
                                                                                 context,
                                                                                 MaterialPageRoute(
                                                                                   builder: (context) => CadLinha(
-                                                                                      subAreaId: subarea.id, // Alteração aqui
+                                                                                      subAreaId: subarea.id,
+                                                                                      idArea: index, // Alteração aqui
                                                                                       idPlano: id),
                                                                                 ),
                                                                               );
@@ -968,7 +976,8 @@ class _AreaState extends State<Arvore> {
                                                                                     context,
                                                                                     MaterialPageRoute(
                                                                                       builder: (context) => CadTagMotor(
-                                                                                          linhaId: linha.id, // Alteração aqui
+                                                                                          linhaId: linha.id,
+                                                                                          idArea: index, // Alteração aqui
                                                                                           planoId: id),
                                                                                     ),
                                                                                   );
@@ -1183,7 +1192,8 @@ class _AreaState extends State<Arvore> {
                                                                                                     context,
                                                                                                     MaterialPageRoute(
                                                                                                       builder: (context) => CadConjEqui(
-                                                                                                          motorId: tagMaquina.id, // Alteração aqui
+                                                                                                          motorId: tagMaquina.id,
+                                                                                                          idArea: index, // Alteração aqui
                                                                                                           planoId: id),
                                                                                                     ),
                                                                                                   );
@@ -1202,7 +1212,7 @@ class _AreaState extends State<Arvore> {
                                                                                                   await duplicarTagEMaquina(linha.id, tagMaquina.id); // Supondo que este método já esteja implementado e funcione corretamente
 
                                                                                                   setState(() {
-                                                                                                    // Nenhuma atualização de estado é necessária aqui
+                                                                                                    idArea = index;
                                                                                                   });
                                                                                                   await _carregarDados(); // Isso recarrega todos os dados e atualiza a UI
                                                                                                   Navigator.of(context).pop();
@@ -1538,7 +1548,7 @@ class _AreaState extends State<Arvore> {
                                                                               mainAxisAlignment: MainAxisAlignment.start,
                                                                               crossAxisAlignment: CrossAxisAlignment.start,
                                                                               children: [
-                                                                                Text('CONJUNTO: ${conjuntoEquip.conjNome}'),
+                                                                                Text('CONJUNTO: ${conjuntoEquip.conjNome} ${areas[index].id}'),
                                                                                 Text('EQUIPAMENTO: ${conjuntoEquip.equiNome}'),
                                                                               ],
                                                                             ),
@@ -1577,7 +1587,8 @@ class _AreaState extends State<Arvore> {
                                                                                                   context,
                                                                                                   MaterialPageRoute(
                                                                                                     builder: (context) => CadPontos(
-                                                                                                        conjuntoId: conjuntoEquip.id, // Alteração aqui
+                                                                                                        conjuntoId: conjuntoEquip.id,
+                                                                                                        idArea: index, // Alteração aqui
                                                                                                         idPlano: id),
                                                                                                   ),
                                                                                                 );
@@ -1768,18 +1779,15 @@ class AreaModel {
     required this.id,
     required this.nome,
     required this.subareas,
-    this.isVisible = false,
+    this.isVisible = true,
   });
 
   factory AreaModel.fromMap(Map<String, dynamic> map) {
     return AreaModel(
       id: map['id'] as int,
       nome: map['nome'] as String,
-      // A conversão de subáreas depende de como você quer tratar isso,
-      // aqui está um exemplo onde inicializamos vazio já que o map não as contém
       subareas: [],
-      isVisible:
-          map.containsKey('isVisible') ? map['isVisible'] as bool : false,
+      isVisible: map.containsKey('isVisible') ? map['isVisible'] as bool : true,
     );
   }
 }
@@ -1845,7 +1853,7 @@ class TagMaquina {
     required this.tagNome,
     required this.maquinaNome,
     required this.conjuntosEquip,
-    this.isVisible = true,
+    this.isVisible = false,
     required this.id,
     // Inclua no construtor
   });
@@ -1862,7 +1870,7 @@ class ConjuntoEquipModel {
     required this.id,
     required this.conjNome,
     required this.equiNome,
-    this.isVisible = true,
+    this.isVisible = false,
     this.pontosLub = const [],
   });
 }

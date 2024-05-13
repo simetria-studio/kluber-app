@@ -7,7 +7,9 @@ import 'package:kluber/pages/planos_lub/arvore.dart';
 class CadLinha extends StatefulWidget {
   final int subAreaId;
   final int idPlano;
-  const CadLinha({Key? key, required this.subAreaId, required this.idPlano})
+  final int? idArea;
+  const CadLinha(
+      {Key? key, required this.subAreaId, required this.idPlano, this.idArea})
       : super(key: key);
 
   @override
@@ -152,7 +154,7 @@ class _CadLinhaState extends State<CadLinha> {
                         ),
                       ),
                       onPressed: () {
-                         Navigator.of(context).pop();
+                        Navigator.of(context).pop();
                       },
                       child: const Text('Cancelar'),
                     ),
@@ -175,7 +177,8 @@ class _CadLinhaState extends State<CadLinha> {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => Arvore(idPlano: id),
+                              builder: (context) =>
+                                  Arvore(idPlano: id, idArea: widget.idArea),
                             ),
                           );
                         }

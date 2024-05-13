@@ -24,6 +24,9 @@ class CadPlanoLub extends StatefulWidget {
 
 class _CadPlanoLubState extends State<CadPlanoLub> {
   bool userDataLoaded = false;
+  bool _isClienteSelected = false;
+  bool _isResponsavelSelected = false;
+
   late DateTime? entryDate;
   late DateTime? revDate;
   final TextEditingController _clienteController = TextEditingController();
@@ -92,6 +95,23 @@ class _CadPlanoLubState extends State<CadPlanoLub> {
   @override
   void initState() {
     super.initState();
+    _clienteController.addListener(() {
+      if (_clienteController.text !=
+          _clientes.firstWhere(
+              (client) => client['razao_social'] == _clienteController.text,
+              orElse: () => {})['razao_social']) {
+        _isClienteSelected = false;
+      }
+    });
+
+    _resKluberController.addListener(() {
+      if (_resKluberController.text !=
+          _clientes.firstWhere(
+              (client) => client['nome_usuario'] == _resKluberController.text,
+              orElse: () => {})['nome_usuario']) {
+        _isResponsavelSelected = false;
+      }
+    });
     _carregarClientesOffline('').then((clientesLocais) {
       if (clientesLocais.isNotEmpty) {
         // Atualizar a UI com os dados locais
@@ -318,6 +338,7 @@ class _CadPlanoLubState extends State<CadPlanoLub> {
                     _clienteController.text = suggestion['razao_social'];
                     _clienteCodigoController.text =
                         suggestion['codigo_cliente'];
+                    _isClienteSelected = true;
                   });
                 },
                 itemBuilder: (context, Map<String, dynamic> suggestion) {
@@ -394,6 +415,7 @@ class _CadPlanoLubState extends State<CadPlanoLub> {
                 onSuggestionSelected: (suggestion) {
                   setState(() {
                     _resKluberController.text = suggestion['nome_usuario'];
+                    _isResponsavelSelected = true;
                   });
                 },
                 itemBuilder: (context, Map<String, dynamic> suggestion) {
@@ -415,14 +437,33 @@ class _CadPlanoLubState extends State<CadPlanoLub> {
               height: 50,
               child: ElevatedButton(
                 onPressed: () async {
-                  int idPlano = await salvarDados();
-                  if (idPlano != -1) {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => Arvore(idPlano: idPlano),
+                  if (!_isClienteSelected || !_isResponsavelSelected) {
+                    showDialog(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        title: const Text("Erro"),
+                        content: const Text(
+                            "Por favor, selecione um cliente e um responsável Klüber das sugestões."),
+                        actions: <Widget>[
+                          TextButton(
+                            onPressed: () {
+                              Navigator.of(context).pop();
+                            },
+                            child: const Text("OK"),
+                          ),
+                        ],
                       ),
                     );
+                  } else {
+                    int idPlano = await salvarDados();
+                    if (idPlano != -1) {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => Arvore(idPlano: idPlano),
+                        ),
+                      );
+                    }
                   }
                 },
                 style: ElevatedButton.styleFrom(
