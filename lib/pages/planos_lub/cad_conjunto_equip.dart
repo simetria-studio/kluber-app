@@ -70,8 +70,10 @@ class _CadConjEquiState extends State<CadConjEqui> {
 
       // Insere os dados na base de dados e retorna o ID do plano inserido
       int id = await _databaseHelper.insertConjuntoAndEquip(tagCad);
+      print('ID do plano inserido: $id');
       return id;
     } catch (e) {
+      print(e.toString());
       return -1; // Retorna -1 em caso de falha
     }
   }
@@ -185,12 +187,13 @@ class _CadConjEquiState extends State<CadConjEqui> {
                     ),
                     onPressed: () async {
                       int idPlano = await salvarConjunto();
+
                       if (idPlano != -1) {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
                             builder: (context) => Arvore(
-                              idPlano: id,
+                              idPlano: widget.planoId,
                               idArea: widget.idArea,
                             ),
                           ),

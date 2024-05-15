@@ -91,6 +91,27 @@ class _PlanosState extends State<Planos> {
     _planosFuture = databaseHelper.getPlanosLub();
   }
 
+  Future<void> _showSyncingDialog() async {
+    return showDialog<void>(
+      context: context,
+      barrierDismissible:
+          false, // o usuário não pode fechar o diálogo clicando fora dele
+      builder: (BuildContext context) {
+        return const AlertDialog(
+          title: Text('Sincronizando'),
+          content: SingleChildScrollView(
+            child: ListBody(
+              children: <Widget>[
+                Text('A sincronização está em andamento...'),
+                CircularProgressIndicator(), // Um indicador de progresso para mostrar que está sincronizando
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -118,11 +139,30 @@ class _PlanosState extends State<Planos> {
               ),
             ),
             onPressed: () async {
+              showDialog(
+                context: context,
+                barrierDismissible:
+                    false, // o usuário não pode fechar o diálogo clicando fora dele
+                builder: (BuildContext context) {
+                  return const AlertDialog(
+                    title: Text('Sincronizando'),
+                    content: SingleChildScrollView(
+                      child: ListBody(
+                        children: <Widget>[
+                          Text('A sincronização está em andamento...'),
+                          CircularProgressIndicator(), // Um indicador de progresso para mostrar que está sincronizando
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              );
               final sincronizador = Sincronizador();
               try {
                 final result = await sincronizador.sincronizarDados();
 
                 if (result) {
+                  Navigator.pop(context); // Fechar o diálogo em caso de erro
                   await Future.delayed(
                       const Duration(seconds: 2)); // Atraso de 2 segundos
                   setState(() {
@@ -136,6 +176,7 @@ class _PlanosState extends State<Planos> {
                   );
                 }
               } catch (e) {
+                Navigator.pop(context); // Fechar o diálogo em caso de erro
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text('Erro ao sincronizar dados: $e'),
@@ -166,7 +207,6 @@ class _PlanosState extends State<Planos> {
                     itemCount: snapshot.data!.length,
                     itemBuilder: (context, index) {
                       final plano = snapshot.data![index];
-                      print(plano);
                       return Card(
                         elevation: 4,
                         margin: const EdgeInsets.symmetric(

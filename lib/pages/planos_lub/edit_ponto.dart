@@ -20,6 +20,7 @@ class EditPonto extends StatefulWidget {
 
 class _EditPontoState extends State<EditPonto> {
   bool userDataLoaded = false;
+  Map<String, dynamic>? _selectedPeriodicidade;
   final DatabaseHelper _databaseHelper = DatabaseHelper();
   final TextEditingController _componentController = TextEditingController();
   final TextEditingController _componentCodeController =
@@ -44,6 +45,7 @@ class _EditPontoState extends State<EditPonto> {
   String responsavelLubrificacao = '';
   String responsavelKluber = '';
   int id = 0;
+  List<Map<String, dynamic>> _periodicidadeList = [];
 
   void carregarDadosPonto() async {
     var ponto = await _databaseHelper.getPontoById(widget.pontoId);
@@ -352,10 +354,17 @@ class _EditPontoState extends State<EditPonto> {
     }
   }
 
+  Future<void> _loadPeriodicidade() async {
+    List<Map<String, dynamic>> periodicidadeList =
+        await _fetchPeriodicidade('');
+    setState(() {
+      _periodicidadeList = periodicidadeList;
+    });
+  }
+
   Future<List<Map<String, dynamic>>> _fetchPeriodicidade(
       String searchText) async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
-    // Create a cache key that includes the searchText to differentiate caches
     String cacheKey =
         'periodicidade_${searchText.replaceAll(RegExp('[^A-Za-z0-9]'), '')}';
     var cachedData = prefs.getString(cacheKey);
@@ -376,26 +385,22 @@ class _EditPontoState extends State<EditPonto> {
       String searchText, String cacheKey) async {
     try {
       final response = await http.post(
-          Uri.parse('${ApiConfig.apiUrl}/get-frequencia'),
-          body: json
-              .encode({"codigo_empresa": '0001', "search_text": searchText}),
-          headers: {"Content-Type": "application/json"});
+        Uri.parse('${ApiConfig.apiUrl}/get-frequencia'),
+        body:
+            json.encode({"codigo_empresa": '0001', "search_text": searchText}),
+        headers: {"Content-Type": "application/json"},
+      );
 
       if (response.statusCode == 200) {
         final responseData = json.decode(response.body);
         final SharedPreferences prefs = await SharedPreferences.getInstance();
-        await prefs.setString(
-            cacheKey,
-            json.encode(
-                responseData)); // Save the response in SharedPreferences under the specific cache key
+        await prefs.setString(cacheKey, json.encode(responseData));
         return List<Map<String, dynamic>>.from(responseData);
       } else {
-        return _carregarPeriodicidadeOffline(
-            searchText); // Fallback to offline data
+        return _carregarPeriodicidadeOffline(searchText);
       }
     } catch (e) {
-      return _carregarPeriodicidadeOffline(
-          searchText); // Fallback to offline data on error
+      return _carregarPeriodicidadeOffline(searchText);
     }
   }
 
@@ -411,7 +416,6 @@ class _EditPontoState extends State<EditPonto> {
 
       if (searchText.isNotEmpty) {
         allPeriodicity = allPeriodicity.where((periodicity) {
-          // Add null safety check before calling toLowerCase
           final descricao = periodicity['descricao'] as String?;
           return descricao?.toLowerCase().contains(searchText.toLowerCase()) ??
               false;
@@ -420,7 +424,7 @@ class _EditPontoState extends State<EditPonto> {
 
       return allPeriodicity;
     } else {
-      return []; // Returns an empty list if there are no saved data
+      return [];
     }
   }
 
@@ -673,38 +677,39 @@ class _EditPontoState extends State<EditPonto> {
             ),
             Padding(
               padding: const EdgeInsets.all(8.0),
-              child: TypeAheadField<Map<String, dynamic>>(
-                textFieldConfiguration: TextFieldConfiguration(
-                  controller: _periodicidadeController,
-                  enabled: userDataLoaded,
-                  decoration: const InputDecoration(
-                    labelText: 'Periodicidade:',
-                    border: OutlineInputBorder(),
-                  ),
+              child: DropdownButtonFormField<Map<String, dynamic>>(
+                value: _selectedPeriodicidade,
+                onChanged: userDataLoaded
+                    ? (Map<String, dynamic>? newValue) {
+                        setState(() {
+                          _selectedPeriodicidade = newValue;
+                          _periodicidadeController.text =
+                              newValue?['descricao'] ?? '';
+                          _periodicidadeCodeController.text =
+                              newValue?['codigo'] ?? '';
+                        });
+                      }
+                    : null,
+                decoration: const InputDecoration(
+                  labelText: 'Periodicidade:',
+                  border: OutlineInputBorder(),
                 ),
-                suggestionsCallback: (pattern) async {
-                  final suggestions = await _fetchPeriodicidade(
-                      pattern); // Faz a chamada à API com o texto de pesquisa
-                  return suggestions;
-                },
-                onSuggestionSelected: (suggestion) {
-                  setState(() {
-                    _periodicidadeController.text = suggestion['descricao'];
-                    _periodicidadeCodeController.text = suggestion['codigo'];
-                  });
-                },
-                itemBuilder: (context, Map<String, dynamic> suggestion) {
-                  // Renderize a sugestão aqui
-                  return ListTile(
-                    title: Text(suggestion['descricao'] ?? ''),
-                    subtitle: Row(
-                      children: [
-                        Text(suggestion['codigo'] ?? ''),
-                        const SizedBox(width: 10),
-                      ],
+                items: _periodicidadeList
+                    .map<DropdownMenuItem<Map<String, dynamic>>>(
+                        (Map<String, dynamic> value) {
+                  return DropdownMenuItem<Map<String, dynamic>>(
+                    value: value,
+                    child: ListTile(
+                      title: Text(value['descricao'] ?? ''),
+                      subtitle: Row(
+                        children: [
+                          Text(value['codigo'] ?? ''),
+                          const SizedBox(width: 10),
+                        ],
+                      ),
                     ),
                   );
-                },
+                }).toList(),
               ),
             ),
             Padding(

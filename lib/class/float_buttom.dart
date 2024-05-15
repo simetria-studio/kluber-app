@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:kluber/class/color_config.dart';
 import 'package:kluber/pages/homepage.dart';
 import 'package:kluber/pages/planos_lub/cad_plano.dart';
+import 'package:kluber/pages/planos_lub/versao.dart';
 // Importe a tela HomePage aqui
 
 class FloatBtn {
@@ -49,7 +50,11 @@ class FloatBtn {
           ),
           IconButton(
             icon: const Icon(Icons.person),
-            onPressed: () {},
+            onPressed: () {
+              Navigator.of(context).push(MaterialPageRoute(
+                builder: (context) => const Versao(),
+              ));
+            },
             color: ColorConfig.preto,
           ),
         ],

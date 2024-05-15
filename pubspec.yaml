@@ -1,7 +1,7 @@
 name: kluber
 description: "A new Flutter project."
 publish_to: 'none'
-version: 1.0.0+39
+version: 1.0.0+43
 
 environment:
   sdk: '>=3.2.5 <4.0.0'
@@ -20,6 +20,7 @@ dependencies:
   connectivity_plus: ^6.0.1
   flutter_launcher_icons: ^0.13.1
   change_app_package_name: ^1.1.0
+  package_info_plus: ^5.0.1
 
 flutter_launcher_icons:
   android: "launcher_icon"
