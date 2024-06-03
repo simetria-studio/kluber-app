@@ -6,7 +6,12 @@ import 'package:kluber/pages/planos_lub/arvore.dart';
 class EditConjEqui extends StatefulWidget {
   final int conjEquiId;
   final int id;
-  const EditConjEqui({super.key, required this.conjEquiId, required this.id});
+  final int index;
+  const EditConjEqui(
+      {super.key,
+      required this.conjEquiId,
+      required this.id,
+      required this.index});
 
   @override
   State<EditConjEqui> createState() => _EditConjEquiState();
@@ -74,7 +79,10 @@ class _EditConjEquiState extends State<EditConjEqui> {
     databaseHelper.editarConjEquip(novosDados);
 
     Navigator.push(context, MaterialPageRoute(builder: (context) {
-      return Arvore(idPlano: widget.id);
+      return Arvore(
+        idPlano: widget.id,
+        idArea: widget.index,
+      );
     }));
   }
 

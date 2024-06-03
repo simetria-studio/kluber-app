@@ -6,8 +6,12 @@ import 'package:kluber/pages/planos_lub/arvore.dart';
 class EditTagMaquina extends StatefulWidget {
   final int tagMaquinaId;
   final int id;
+  final int index;
   const EditTagMaquina(
-      {super.key, required this.tagMaquinaId, required this.id});
+      {super.key,
+      required this.tagMaquinaId,
+      required this.id,
+      required this.index});
 
   @override
   State<EditTagMaquina> createState() => _EditTagMaquinaState();
@@ -75,7 +79,10 @@ class _EditTagMaquinaState extends State<EditTagMaquina> {
     databaseHelper.editarTagMaquina(novosDados);
 
     Navigator.push(context, MaterialPageRoute(builder: (context) {
-      return Arvore(idPlano: widget.id);
+      return Arvore(
+        idPlano: widget.id,
+        idArea: widget.index,
+      );
     }));
   }
 

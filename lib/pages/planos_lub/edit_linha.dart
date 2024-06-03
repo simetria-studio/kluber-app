@@ -6,7 +6,12 @@ import 'package:kluber/pages/planos_lub/arvore.dart';
 class EditLinha extends StatefulWidget {
   final int linhaId;
   final int id;
-  const EditLinha({super.key, required this.linhaId, required this.id});
+  final int index;
+  const EditLinha(
+      {super.key,
+      required this.linhaId,
+      required this.id,
+      required this.index});
 
   @override
   State<EditLinha> createState() => _EditLinhaState();
@@ -71,7 +76,10 @@ class _EditLinhaState extends State<EditLinha> {
     databaseHelper.editarLinha(novosDados);
 
     Navigator.push(context, MaterialPageRoute(builder: (context) {
-      return Arvore(idPlano: widget.id);
+      return Arvore(
+        idPlano: widget.id,
+        idArea: widget.index,
+      );
     }));
   }
 

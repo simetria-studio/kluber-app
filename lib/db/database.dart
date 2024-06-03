@@ -96,6 +96,8 @@ class DatabaseHelper {
     period_codigo TEXT,
     tempo_atv TEXT NULL,
     qty_pessoas TEXT,
+    unidade_medida_name TEXT,
+    unidade_medida_codigo TEXT,
     plano_id INTEGER,
     conjunto_equip_id INTEGER,
     FOREIGN KEY (conjunto_equip_id) REFERENCES conjunto_equip (id)
@@ -759,6 +761,8 @@ class DatabaseHelper {
                     periodCodigo: ponto['period_codigo'],
                     qtyPessoas: ponto['qty_pessoas'],
                     planoId: ponto['plano_id'],
+                    unidadeMedidaName: ponto['unidade_medida_name'],
+                    unidadeMedidaCodigo: ponto['unidade_medida_codigo'],
                     conjuntoEquipId: ponto['conjunto_equip_id'],
                   ));
                 }
@@ -1011,6 +1015,8 @@ class Pontos {
   String periodName;
   String periodCodigo;
   String qtyPessoas;
+  String unidadeMedidaName;
+  String unidadeMedidaCodigo;
   String tempoAtv;
   int planoId;
   int conjuntoEquipId;
@@ -1031,6 +1037,8 @@ class Pontos {
     required this.periodCodigo,
     required this.qtyPessoas,
     required this.tempoAtv,
+    required this.unidadeMedidaName,
+    required this.unidadeMedidaCodigo,
     required this.planoId,
     required this.conjuntoEquipId,
   });
@@ -1052,6 +1060,8 @@ class Pontos {
       'period_codigo': periodCodigo,
       'tempo_atv': tempoAtv,
       'qty_pessoas': qtyPessoas,
+      'unidade_medida_name': unidadeMedidaName,
+      'unidade_medida_codigo': unidadeMedidaCodigo,
       'plano_id': planoId,
       'conjunto_equip_id': conjuntoEquipId,
     };
@@ -1074,6 +1084,8 @@ class Pontos {
       periodName: ponto['period_name'],
       periodCodigo: ponto['period_codigo'],
       qtyPessoas: ponto['qty_pessoas'],
+      unidadeMedidaName: ponto['unidade_medida_name'],
+      unidadeMedidaCodigo: ponto['unidade_medida_codigo'],
       planoId: ponto['plano_id'],
       conjuntoEquipId: ponto['conjunto_equip_id'],
     );

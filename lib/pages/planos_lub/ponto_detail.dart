@@ -9,8 +9,10 @@ import 'package:kluber/pages/planos_lub/edit_ponto.dart';
 
 class PontoDetail extends StatefulWidget {
   final int id;
+  final int planoId;
 
-  const PontoDetail({Key? key, required this.id}) : super(key: key);
+  const PontoDetail({Key? key, required this.id, required this.planoId})
+      : super(key: key);
 
   @override
   State<PontoDetail> createState() => _PontoDetailState();
@@ -47,6 +49,14 @@ class _PontoDetailState extends State<PontoDetail> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => Arvore(idPlano: widget.planoId),
+              )),
+        ),
         title: Text(
           'Ver Ponto'.toUpperCase(),
           style: const TextStyle(color: Colors.black),
@@ -78,8 +88,9 @@ class _PontoDetailState extends State<PontoDetail> {
                                 context,
                                 MaterialPageRoute(
                                     builder: (context) => EditPonto(
-                                        pontoId: _pontoDetails![
-                                            'id']) // Alteração aqu),
+                                          pontoId: _pontoDetails!['id'],
+                                          planoId: widget.planoId,
+                                        ) // Alteração aqu),
                                     ),
                               );
                             },

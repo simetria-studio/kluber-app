@@ -31,9 +31,11 @@ class _CadPontosState extends State<CadPontos> {
   bool _isMaterialSelected = false;
   bool _isCondOpSelected = false;
   bool _isPeriodicidadeSelected = false;
+  bool _isUnidadeMedidaSelected = false;
   Map<String, dynamic>? _selectedPeriodicidade;
   Map<String, dynamic>? _selectedAtvBreve;
   Map<String, dynamic>? _selectedCondOp;
+  Map<String, dynamic>? _selectedUnidadeMedida;
 
   final DatabaseHelper _databaseHelper = DatabaseHelper();
   final TextEditingController _componentController = TextEditingController();
@@ -53,10 +55,15 @@ class _CadPontosState extends State<CadPontos> {
       TextEditingController();
   final TextEditingController _qtyPessoasController = TextEditingController();
   final TextEditingController _tempoAtvController = TextEditingController();
+  final TextEditingController _unidadeMedidaController =
+      TextEditingController();
+  final TextEditingController _unidadeMedidaCodeController =
+      TextEditingController();
   late List<Map<String, dynamic>> _clientes;
   List<Map<String, dynamic>> _periodicidadeList = [];
   List<Map<String, dynamic>> _atvBreveList = [];
   List<Map<String, dynamic>> _condOpList = [];
+  List<Map<String, dynamic>> _unidadeMedidaList = [];
   String cliente = '';
   String dataCadastro = '';
   String dataRevisao = '';
@@ -109,6 +116,7 @@ class _CadPontosState extends State<CadPontos> {
     await _fetchPeriodicidade();
     await _fetchAtvBreve();
     await _fetchCondOp();
+    await _fetchUnidadeMedida();
     setState(() {
       userDataLoaded = true;
     });
@@ -138,6 +146,15 @@ class _CadPontosState extends State<CadPontos> {
       await _loadCondOpFromPrefs();
     } else {
       await _fetchCondOpFromApi();
+    }
+  }
+
+  Future<void> _fetchUnidadeMedida() async {
+    var connectivityResult = await (Connectivity().checkConnectivity());
+    if (connectivityResult == ConnectivityResult.none) {
+      await _loadUnidadeMedidaFromPrefs();
+    } else {
+      await _fetchUnidadeMedidaFromApi();
     }
   }
 
@@ -229,6 +246,35 @@ class _CadPontosState extends State<CadPontos> {
     }
   }
 
+  Future<void> _fetchUnidadeMedidaFromApi() async {
+    try {
+      var connectivityResult = await (Connectivity().checkConnectivity());
+      if (connectivityResult != ConnectivityResult.none) {
+        final response = await http.post(
+          Uri.parse('${ApiConfig.apiUrl}/get-unidade-med'),
+          body: json.encode({"codigo_empresa": '0001'}),
+          headers: {"Content-Type": "application/json"},
+        );
+
+        if (response.statusCode == 200) {
+          final responseData = json.decode(response.body);
+          final SharedPreferences prefs = await SharedPreferences.getInstance();
+          await prefs.setString('unidade_cache', json.encode(responseData));
+          setState(() {
+            _unidadeMedidaList = List<Map<String, dynamic>>.from(responseData);
+          });
+        } else {
+          print('Falha na requisição: ${response.statusCode}');
+        }
+      } else {
+        await _loadUnidadeMedidaFromPrefs();
+      }
+    } catch (e) {
+      print('Erro ao fazer a requisição: $e');
+      await _loadUnidadeMedidaFromPrefs();
+    }
+  }
+
   Future<void> _loadPeriodicidadeFromPrefs() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     var cachedData = prefs.getString('periodicidade_cache');
@@ -236,6 +282,20 @@ class _CadPontosState extends State<CadPontos> {
     if (cachedData != null) {
       setState(() {
         _periodicidadeList =
+            List<Map<String, dynamic>>.from(json.decode(cachedData));
+      });
+    } else {
+      print('Nenhum dado em cache encontrado');
+    }
+  }
+
+  Future<void> _loadUnidadeMedidaFromPrefs() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    var cachedData = prefs.getString('unidade_cache');
+
+    if (cachedData != null) {
+      setState(() {
+        _unidadeMedidaList =
             List<Map<String, dynamic>>.from(json.decode(cachedData));
       });
     } else {
@@ -286,6 +346,8 @@ class _CadPontosState extends State<CadPontos> {
       String tempoAtv = _tempoAtvController.text;
       String periodCodigo = _periodicidadeCodeController.text;
       String qtyPessoas = _qtyPessoasController.text;
+      String unidadeMedidaName = _unidadeMedidaController.text;
+      String unidadeMedidaCodigo = _unidadeMedidaCodeController.text;
       int conjuntoEquipId = widget.conjuntoId;
 
       Map<String, dynamic> subAreaCad = {
@@ -304,6 +366,8 @@ class _CadPontosState extends State<CadPontos> {
         'tempo_atv': tempoAtv,
         'qty_pessoas': qtyPessoas,
         'conjunto_equip_id': conjuntoEquipId,
+        'unidade_medida_name': unidadeMedidaName,
+        'unidade_medida_codigo': unidadeMedidaCodigo,
         'plano_id': widget.idPlano,
       };
 
@@ -595,6 +659,38 @@ class _CadPontosState extends State<CadPontos> {
                   }).toList(),
                   decoration: const InputDecoration(
                     labelText: 'Periodicidade:',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: DropdownButtonFormField<Map<String, dynamic>>(
+                  value: _selectedUnidadeMedida,
+                  onChanged: (newValue) {
+                    setState(() {
+                      _selectedUnidadeMedida = newValue;
+                      _unidadeMedidaController.text =
+                          newValue!['descricao_unidade_medida'];
+                      _unidadeMedidaCodeController.text =
+                          newValue['codigo_unidade_medida'];
+                      _isUnidadeMedidaSelected = true;
+                    });
+                  },
+                  items: _unidadeMedidaList.map((suggestion) {
+                    return DropdownMenuItem<Map<String, dynamic>>(
+                      value: suggestion,
+                      child: Row(
+                        children: [
+                          Text(suggestion['descricao_unidade_medida'] ?? ''),
+                          const SizedBox(width: 10),
+                          Text(suggestion['codigo_unidade_medida'] ?? ''),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                  decoration: const InputDecoration(
+                    labelText: 'Unidade de Medida:',
                     border: OutlineInputBorder(),
                   ),
                 ),

@@ -514,6 +514,7 @@ class _AreaState extends State<Arvore> {
                                                             builder:
                                                                 (context) =>
                                                                     EditArea(
+                                                              index: index,
                                                               areaId:
                                                                   areas[index]
                                                                       .id,
@@ -774,6 +775,7 @@ class _AreaState extends State<Arvore> {
                                                                                 context,
                                                                                 MaterialPageRoute(
                                                                                   builder: (context) => EditSubArea(
+                                                                                    index: index,
                                                                                     subAreaId: subarea.id,
                                                                                     id: widget.idPlano, // Alteração aqui
                                                                                   ),
@@ -996,6 +998,7 @@ class _AreaState extends State<Arvore> {
                                                                                     context,
                                                                                     MaterialPageRoute(
                                                                                       builder: (context) => EditLinha(
+                                                                                          index: index,
                                                                                           linhaId: subarea.id, // Alteração aqui
                                                                                           id: id),
                                                                                     ),
@@ -1413,6 +1416,7 @@ class _AreaState extends State<Arvore> {
                                                                                                     context,
                                                                                                     MaterialPageRoute(
                                                                                                       builder: (context) => EditTagMaquina(
+                                                                                                          index: index,
                                                                                                           tagMaquinaId: tagMaquina.id, // Alteração aqui
                                                                                                           id: id),
                                                                                                     ),
@@ -1607,6 +1611,7 @@ class _AreaState extends State<Arvore> {
                                                                                                   context,
                                                                                                   MaterialPageRoute(
                                                                                                     builder: (context) => EditConjEqui(
+                                                                                                        index: index,
                                                                                                         conjEquiId: conjuntoEquip.id, // Alteração aqui
                                                                                                         id: id),
                                                                                                   ),
@@ -1687,7 +1692,7 @@ class _AreaState extends State<Arvore> {
                                                                                 Navigator.push(
                                                                                   context,
                                                                                   MaterialPageRoute(
-                                                                                    builder: (context) => PontoDetail(id: ponto.id),
+                                                                                    builder: (context) => PontoDetail(id: ponto.id, planoId: id),
                                                                                   ),
                                                                                 );
                                                                               },

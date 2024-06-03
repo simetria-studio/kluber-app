@@ -6,8 +6,10 @@ import 'package:kluber/pages/planos_lub/arvore.dart';
 class EditArea extends StatefulWidget {
   final int areaId;
   final int id;
+  final int index;
 
-  const EditArea({Key? key, required this.areaId, required this.id})
+  const EditArea(
+      {Key? key, required this.areaId, required this.id, required this.index})
       : super(key: key);
 
   @override
@@ -120,7 +122,10 @@ class _EditAreaState extends State<EditArea> {
     databaseHelper.editarArea(novosDados);
 
     Navigator.push(context, MaterialPageRoute(builder: (context) {
-      return Arvore(idPlano: widget.id);
+      return Arvore(
+        idPlano: widget.id,
+        idArea: widget.index,
+      );
     }));
   }
 

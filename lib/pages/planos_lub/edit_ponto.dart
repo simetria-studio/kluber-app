@@ -12,7 +12,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class EditPonto extends StatefulWidget {
   final int pontoId;
-  const EditPonto({super.key, required this.pontoId});
+  final int planoId;
+  const EditPonto({super.key, required this.pontoId, required this.planoId});
 
   @override
   State<EditPonto> createState() => _EditPontoState();
@@ -477,7 +478,8 @@ class _EditPontoState extends State<EditPonto> {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => PontoDetail(id: widget.pontoId),
+          builder: (context) =>
+              PontoDetail(id: widget.pontoId, planoId: widget.planoId),
         ),
       );
     } else {
@@ -485,7 +487,8 @@ class _EditPontoState extends State<EditPonto> {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => PontoDetail(id: widget.pontoId),
+          builder: (context) =>
+              PontoDetail(id: widget.pontoId, planoId: widget.planoId),
         ),
       );
     }
