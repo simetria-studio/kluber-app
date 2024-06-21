@@ -577,6 +577,24 @@ class _CadPontosState extends State<CadPontos> {
                       _materialCodeController.text =
                           suggestion['codigo_produto'];
                       _isMaterialSelected = true;
+
+                      // Atualiza a unidade de medida selecionada
+                      _selectedUnidadeMedida = _unidadeMedidaList.firstWhere(
+                        (element) =>
+                            element['descricao_unidade_medida'] ==
+                            suggestion['unidade_medida'],
+                        orElse: () => {
+                          'descricao_unidade_medida':
+                              suggestion['unidade_medida'],
+                          'codigo_unidade_medida': ''
+                        },
+                      );
+
+                      // Se a unidade de medida não estiver na lista, adicione-a
+                      if (!_unidadeMedidaList
+                          .contains(_selectedUnidadeMedida)) {
+                        _unidadeMedidaList.add(_selectedUnidadeMedida!);
+                      }
                     });
                   },
                   itemBuilder: (context, Map<String, dynamic> suggestion) {
