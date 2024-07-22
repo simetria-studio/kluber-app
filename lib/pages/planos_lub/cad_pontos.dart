@@ -711,6 +711,12 @@ class _CadPontosState extends State<CadPontos> {
                     labelText: 'Unidade de Medida:',
                     border: OutlineInputBorder(),
                   ),
+                  validator: (value) {
+                    if (value == null) {
+                      return 'Por favor, selecione uma unidade de medida';
+                    }
+                    return null;
+                  },
                 ),
               ),
               Padding(
