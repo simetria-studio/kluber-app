@@ -27,6 +27,7 @@ class Arvore extends StatefulWidget {
 }
 
 class _AreaState extends State<Arvore> {
+  final ScrollController _scrollController = ScrollController();
   List<AreaModel> areas = []; // Alteração aqui
   String cliente = '';
   String dataCadastro = '';
@@ -311,6 +312,39 @@ class _AreaState extends State<Arvore> {
   }
 
   @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _scrollToEndOrStart() {
+    if (_scrollController.position.atEdge) {
+      if (_scrollController.position.pixels == 0) {
+        // Estamos no topo, rolar para o final
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(seconds: 2),
+          curve: Curves.easeInOut,
+        );
+      } else {
+        // Estamos no final, rolar para o topo
+        _scrollController.animateTo(
+          0,
+          duration: const Duration(seconds: 2),
+          curve: Curves.easeInOut,
+        );
+      }
+    } else {
+      // Se estamos no meio, rolar para o final
+      _scrollController.animateTo(
+        _scrollController.position.maxScrollExtent,
+        duration: const Duration(seconds: 2),
+        curve: Curves.easeInOut,
+      );
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
@@ -417,8 +451,21 @@ class _AreaState extends State<Arvore> {
                             Expanded(
                               flex:
                                   3, // Isso permite que o widget de texto ocupe 75% do espaço
-                              child: Text(
-                                  'Área: ${areas[index].nome}'), // Alteração aqui
+                              child: Row(
+                                children: [
+                                  const Text(
+                                    'Área: ',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                  Text(areas[index].nome,
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.bold,
+                                      )),
+                                ],
+                              ), // Alteração aqui
                             ),
                             const SizedBox(
                                 width: 10), // Espaço entre o texto e o botão
@@ -667,8 +714,19 @@ class _AreaState extends State<Arvore> {
                                                     padding:
                                                         const EdgeInsets.all(
                                                             4.0),
-                                                    child: Text(
-                                                        'Subárea: ${subarea.nome}'),
+                                                    child: Row(
+                                                      children: [
+                                                        const Text('Subarea: ',
+                                                            style: TextStyle(
+                                                                fontSize: 14)),
+                                                        Text(subarea.nome,
+                                                            style: const TextStyle(
+                                                                fontSize: 14,
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .bold)),
+                                                      ],
+                                                    ),
                                                   ),
                                                 ),
                                                 Expanded(
@@ -888,8 +946,22 @@ class _AreaState extends State<Arvore> {
                                                         padding:
                                                             const EdgeInsets
                                                                 .all(4.0),
-                                                        child: Text(
-                                                            'Linha: ${linha.nome}'),
+                                                        child: Row(
+                                                          children: [
+                                                            const Text(
+                                                                'Linha: ',
+                                                                style: TextStyle(
+                                                                    fontSize:
+                                                                        14)),
+                                                            Text(linha.nome,
+                                                                style: const TextStyle(
+                                                                    fontSize:
+                                                                        14,
+                                                                    fontWeight:
+                                                                        FontWeight
+                                                                            .bold)),
+                                                          ],
+                                                        ),
                                                       ),
                                                     ),
                                                     Expanded(
@@ -1132,8 +1204,18 @@ class _AreaState extends State<Arvore> {
                                                                           crossAxisAlignment:
                                                                               CrossAxisAlignment.start,
                                                                           children: [
-                                                                            Text('TAG: ${tagMaquina.tagNome}'),
-                                                                            Text('MAQUINA: ${tagMaquina.maquinaNome}'),
+                                                                            Row(
+                                                                              children: [
+                                                                                const Text('Tag: ', style: TextStyle(fontSize: 14)),
+                                                                                Text(tagMaquina.tagNome, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                                                                              ],
+                                                                            ),
+                                                                            Row(
+                                                                              children: [
+                                                                                const Text('Máq: ', style: TextStyle(fontSize: 14)),
+                                                                                Text(tagMaquina.maquinaNome, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                                                                              ],
+                                                                            ),
                                                                           ],
                                                                         ),
                                                                       ),
@@ -1552,8 +1634,18 @@ class _AreaState extends State<Arvore> {
                                                                               mainAxisAlignment: MainAxisAlignment.start,
                                                                               crossAxisAlignment: CrossAxisAlignment.start,
                                                                               children: [
-                                                                                Text('CONJUNTO: ${conjuntoEquip.conjNome} ${areas[index].id}'),
-                                                                                Text('EQUIPAMENTO: ${conjuntoEquip.equiNome}'),
+                                                                                Row(
+                                                                                  children: [
+                                                                                    const Text('Con: ', style: TextStyle(fontSize: 14)),
+                                                                                    Text(conjuntoEquip.conjNome, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                                                                                  ],
+                                                                                ),
+                                                                                Row(
+                                                                                  children: [
+                                                                                    const Text('Equi: ', style: TextStyle(fontSize: 14)),
+                                                                                    Text(conjuntoEquip.equiNome, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                                                                                  ],
+                                                                                ),
                                                                               ],
                                                                             ),
                                                                           ),
@@ -1687,7 +1779,7 @@ class _AreaState extends State<Arvore> {
                                                                             Column(
                                                                           children: [
                                                                             TextButton(
-                                                                              child: Text('Ponto: ${ponto.componentName} - ${ponto.componentDescricao} ', style: const TextStyle(color: ColorConfig.preto)),
+                                                                              child: Text('Ponto: ${ponto.componentName} - ${ponto.componentDescricao} ', style: const TextStyle(color: ColorConfig.preto, fontSize: 14)),
                                                                               onPressed: () {
                                                                                 Navigator.push(
                                                                                   context,
@@ -1765,6 +1857,7 @@ class _AreaState extends State<Arvore> {
           ],
         ),
       ),
+
       floatingActionButton: FloatBtn.build(
           context), // Chama o FloatingActionButton da classe FloatBtn
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,

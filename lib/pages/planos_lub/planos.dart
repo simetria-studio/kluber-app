@@ -8,7 +8,9 @@ import 'package:kluber/pages/planos_lub/arvore.dart';
 import 'package:kluber/pages/planos_lub/edit_plano.dart';
 import 'package:intl/intl.dart';
 import 'package:http/http.dart' as http;
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'dart:convert';
+import 'dart:io';
 
 class Planos extends StatefulWidget {
   const Planos({super.key});
@@ -20,11 +22,24 @@ class Planos extends StatefulWidget {
 class _PlanosState extends State<Planos> {
   late Future<List<Map<String, dynamic>>> _planosFuture;
   List<Map<String, dynamic>> planos = [];
+  bool isOffline = false;
+
   @override
   void initState() {
     super.initState();
     _loadPlanos();
-    _loadPlanosFromAPI();
+    _checkConnectivity();
+  }
+
+  Future<void> _checkConnectivity() async {
+    final connectivityResult = await (Connectivity().checkConnectivity());
+    setState(() {
+      isOffline = connectivityResult == ConnectivityResult.none;
+    });
+
+    if (!isOffline) {
+      _loadPlanosFromAPI();
+    }
   }
 
   String formatarData(String dataString) {
@@ -37,52 +52,61 @@ class _PlanosState extends State<Planos> {
     final databaseHelper = DatabaseHelper();
 
     final url = Uri.parse('${ApiConfig.apiUrl}/get-plan');
-    final response = await http.post(url);
+    try {
+      final response = await http.post(url);
 
-    if (response.statusCode == 200) {
-      final List<dynamic> responseData = jsonDecode(response.body);
-      List<Map<String, dynamic>> planosAPI =
-          responseData.map((data) => Map<String, dynamic>.from(data)).toList();
+      if (response.statusCode == 200) {
+        final List<dynamic> responseData = jsonDecode(response.body);
+        List<Map<String, dynamic>> planosAPI = responseData
+            .map((data) => Map<String, dynamic>.from(data))
+            .toList();
 
-      // Obtém planos do SQLite
-      List<Map<String, dynamic>> planosSQLite =
-          await databaseHelper.getPlanosLub();
+        // Obtém planos do SQLite
+        List<Map<String, dynamic>> planosSQLite =
+            await databaseHelper.getPlanosLub();
 
-      // Conjunto para manter o controle dos códigos mobile dos planos já inseridos
-      Set<String> codigosInseridos = {};
+        // Conjunto para manter o controle dos códigos mobile dos planos já inseridos
+        Set<String> codigosInseridos = {};
 
-      for (var planoSQLite in planosSQLite) {
-        bool foundMatch =
-            false; // Flag para verificar se o planoSQLite tem correspondência com algum planoAPI
-        for (var planoAPI in planosAPI) {
-          if (planoSQLite['codigo_mobile'] == planoAPI['codigo_mobile']) {
-            foundMatch = true;
-            break; // Se encontrou uma correspondência, não é necessário continuar a busca
+        for (var planoSQLite in planosSQLite) {
+          bool foundMatch =
+              false; // Flag para verificar se o planoSQLite tem correspondência com algum planoAPI
+          for (var planoAPI in planosAPI) {
+            if (planoSQLite['codigo_mobile'] == planoAPI['codigo_mobile']) {
+              foundMatch = true;
+              break; // Se encontrou uma correspondência, não é necessário continuar a busca
+            }
+          }
+
+          // Adiciona o planoSQLite à lista de planos, sem duplicações
+          if (!codigosInseridos.contains(planoSQLite['codigo_mobile'])) {
+            Map<String, dynamic> plano = {
+              'cliente': planoSQLite['cliente'],
+              'id': planoSQLite['id'],
+              'data_cadastro': planoSQLite['data_cadastro'],
+              'data_revisao': planoSQLite['data_revisao'],
+              'responsavel_lubrificacao': planoSQLite['responsavel_kluber'],
+              'codigo_mobile': planoSQLite['codigo_mobile'],
+              'hasLocalPlan': foundMatch
+                  ? 1
+                  : 0, // Adiciona a tag apenas se houver correspondência
+            };
+            planos.add(plano);
+            codigosInseridos.add(planoSQLite['codigo_mobile']);
           }
         }
-
-        // Adiciona o planoSQLite à lista de planos, sem duplicações
-        if (!codigosInseridos.contains(planoSQLite['codigo_mobile'])) {
-          Map<String, dynamic> plano = {
-            'cliente': planoSQLite['cliente'],
-            'id': planoSQLite['id'],
-            'data_cadastro': planoSQLite['data_cadastro'],
-            'data_revisao': planoSQLite['data_revisao'],
-            'responsavel_lubrificacao': planoSQLite['responsavel_kluber'],
-            'codigo_mobile': planoSQLite['codigo_mobile'],
-            'hasLocalPlan': foundMatch
-                ? 1
-                : 0, // Adiciona a tag apenas se houver correspondência
-          };
-          planos.add(plano);
-          codigosInseridos.add(planoSQLite['codigo_mobile']);
-        }
+        setState(() {
+          _planosFuture = Future.value(planos);
+        });
+      } else {
+        throw Exception('Failed to load planos');
       }
+    } on SocketException catch (_) {
       setState(() {
-        _planosFuture = Future.value(planos);
+        isOffline = true;
       });
-    } else {
-      throw Exception('Failed to load planos');
+    } catch (e) {
+      throw Exception('Failed to load planos: $e');
     }
   }
 
@@ -162,7 +186,7 @@ class _PlanosState extends State<Planos> {
                 final result = await sincronizador.sincronizarDados();
 
                 if (result) {
-                  Navigator.pop(context); // Fechar o diálogo em caso de erro
+                  Navigator.pop(context); // Fechar o diálogo em caso de sucesso
                   await Future.delayed(
                       const Duration(seconds: 2)); // Atraso de 2 segundos
                   setState(() {
@@ -261,7 +285,7 @@ class _PlanosState extends State<Planos> {
                                       ),
                                     ),
                                   ),
-                                  if (plano['hasLocalPlan'] == 0)
+                                  if (plano['hasLocalPlan'] == 0 || isOffline)
                                     Padding(
                                       padding: const EdgeInsets.all(8.0),
                                       child: ElevatedButton(

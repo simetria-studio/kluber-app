@@ -1,12 +1,11 @@
 import 'dart:convert';
 import 'package:connectivity_plus/connectivity_plus.dart';
-import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:flutter_typeahead/flutter_typeahead.dart';
 import 'package:kluber/class/api_config.dart';
 import 'package:kluber/class/color_config.dart';
 import 'package:kluber/db/database.dart';
-import 'package:kluber/pages/planos_lub/arvore.dart';
+import 'package:http/http.dart' as http;
 import 'package:kluber/pages/planos_lub/ponto_detail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -21,7 +20,17 @@ class EditPonto extends StatefulWidget {
 
 class _EditPontoState extends State<EditPonto> {
   bool userDataLoaded = false;
+  bool _isComponentSelected = false;
+  bool _isAtvBreveSelected = false;
+  bool _isMaterialSelected = false;
+  bool _isCondOpSelected = false;
+  bool _isPeriodicidadeSelected = false;
+  bool _isUnidadeMedidaSelected = false;
   Map<String, dynamic>? _selectedPeriodicidade;
+  Map<String, dynamic>? _selectedAtvBreve;
+  Map<String, dynamic>? _selectedCondOp;
+  Map<String, dynamic>? _selectedUnidadeMedida;
+
   final DatabaseHelper _databaseHelper = DatabaseHelper();
   final TextEditingController _componentController = TextEditingController();
   final TextEditingController _componentCodeController =
@@ -40,17 +49,42 @@ class _EditPontoState extends State<EditPonto> {
       TextEditingController();
   final TextEditingController _qtyPessoasController = TextEditingController();
   final TextEditingController _tempoAtvController = TextEditingController();
+  final TextEditingController _unidadeMedidaController =
+      TextEditingController();
+  final TextEditingController _unidadeMedidaCodeController =
+      TextEditingController();
+  late List<Map<String, dynamic>> _clientes;
+  List<Map<String, dynamic>> _periodicidadeList = [];
+  List<Map<String, dynamic>> _atvBreveList = [];
+  List<Map<String, dynamic>> _condOpList = [];
+  List<Map<String, dynamic>> _unidadeMedidaList = [];
   String cliente = '';
   String dataCadastro = '';
   String dataRevisao = '';
   String responsavelLubrificacao = '';
   String responsavelKluber = '';
   int id = 0;
-  List<Map<String, dynamic>> _periodicidadeList = [];
+  final databaseHelper = DatabaseHelper();
 
-  void carregarDadosPonto() async {
+  @override
+  void initState() {
+    super.initState();
+    initializeData();
+  }
+
+  Future<void> initializeData() async {
+    await _fetchPeriodicidade();
+    await _fetchAtvBreve();
+    await _fetchCondOp();
+    await _fetchUnidadeMedida();
+    await carregarDadosPonto();
+    setState(() {
+      userDataLoaded = true;
+    });
+  }
+
+  Future<void> carregarDadosPonto() async {
     var ponto = await _databaseHelper.getPontoById(widget.pontoId);
-    print('dados carregados');
     if (ponto != null) {
       setState(() {
         _componentController.text = ponto['component_name'];
@@ -67,440 +101,387 @@ class _EditPontoState extends State<EditPonto> {
         _periodicidadeCodeController.text = ponto['period_codigo'];
         _qtyPessoasController.text = ponto['qty_pessoas'];
         _tempoAtvController.text = ponto['tempo_atv'];
+
+        // Atualiza os valores selecionados com os dados carregados
+        _selectedAtvBreve = _atvBreveList.firstWhere(
+          (element) => element['codigo'] == ponto['atv_breve_codigo'],
+          orElse: () => <String, dynamic>{},
+        );
+        _selectedCondOp = _condOpList.firstWhere(
+          (element) => element['codigo'] == ponto['cond_op_codigo'],
+          orElse: () => <String, dynamic>{},
+        );
+        _selectedPeriodicidade = _periodicidadeList.firstWhere(
+          (element) => element['codigo'] == ponto['period_codigo'],
+          orElse: () => <String, dynamic>{},
+        );
+        _selectedUnidadeMedida = _unidadeMedidaList.firstWhere(
+          (element) =>
+              element['codigo_unidade_medida'] ==
+              ponto['unidade_medida_codigo'],
+          orElse: () => <String, dynamic>{},
+        );
       });
     }
   }
 
-  Future<List<Map<String, dynamic>>> _fetchComponents(String searchText) async {
+  Future<void> _fetchPeriodicidade() async {
+    var connectivityResult = await (Connectivity().checkConnectivity());
+    if (connectivityResult == ConnectivityResult.none) {
+      await _loadPeriodicidadeFromPrefs();
+    } else {
+      await _fetchPeriodicidadeFromApi();
+    }
+  }
+
+  Future<void> _fetchAtvBreve() async {
+    var connectivityResult = await (Connectivity().checkConnectivity());
+    if (connectivityResult == ConnectivityResult.none) {
+      await _loadAtvBreveFromPrefs();
+    } else {
+      await _fetchAtvBreveFromApi();
+    }
+  }
+
+  Future<void> _fetchCondOp() async {
+    var connectivityResult = await (Connectivity().checkConnectivity());
+    if (connectivityResult == ConnectivityResult.none) {
+      await _loadCondOpFromPrefs();
+    } else {
+      await _fetchCondOpFromApi();
+    }
+  }
+
+  Future<void> _fetchUnidadeMedida() async {
+    var connectivityResult = await (Connectivity().checkConnectivity());
+    if (connectivityResult == ConnectivityResult.none) {
+      await _loadUnidadeMedidaFromPrefs();
+    } else {
+      await _fetchUnidadeMedidaFromApi();
+    }
+  }
+
+  Future<void> _fetchPeriodicidadeFromApi() async {
+    try {
+      var connectivityResult = await (Connectivity().checkConnectivity());
+      if (connectivityResult != ConnectivityResult.none) {
+        final response = await http.post(
+          Uri.parse('${ApiConfig.apiUrl}/get-frequencia'),
+          body: json.encode({"codigo_empresa": '0001'}),
+          headers: {"Content-Type": "application/json"},
+        );
+
+        if (response.statusCode == 200) {
+          final responseData = json.decode(response.body);
+          final SharedPreferences prefs = await SharedPreferences.getInstance();
+          await prefs.setString(
+              'periodicidade_cache', json.encode(responseData));
+          setState(() {
+            _periodicidadeList = List<Map<String, dynamic>>.from(responseData);
+          });
+        } else {
+          await _loadPeriodicidadeFromPrefs();
+        }
+      } else {
+        await _loadPeriodicidadeFromPrefs();
+      }
+    } catch (e) {
+      await _loadPeriodicidadeFromPrefs();
+    }
+  }
+
+  Future<void> _fetchAtvBreveFromApi() async {
+    try {
+      var connectivityResult = await (Connectivity().checkConnectivity());
+      if (connectivityResult != ConnectivityResult.none) {
+        final response = await http.post(
+          Uri.parse('${ApiConfig.apiUrl}/get-atividade-breve'),
+          body: json.encode({"codigo_empresa": '0001'}),
+          headers: {"Content-Type": "application/json"},
+        );
+
+        if (response.statusCode == 200) {
+          final responseData = json.decode(response.body);
+          final SharedPreferences prefs = await SharedPreferences.getInstance();
+          await prefs.setString('atvBreve_cache', json.encode(responseData));
+          setState(() {
+            _atvBreveList = List<Map<String, dynamic>>.from(responseData);
+          });
+        } else {
+          await _loadAtvBreveFromPrefs();
+        }
+      } else {
+        await _loadAtvBreveFromPrefs();
+      }
+    } catch (e) {
+      await _loadAtvBreveFromPrefs();
+    }
+  }
+
+  Future<void> _fetchCondOpFromApi() async {
+    try {
+      var connectivityResult = await (Connectivity().checkConnectivity());
+      if (connectivityResult != ConnectivityResult.none) {
+        final response = await http.post(
+          Uri.parse('${ApiConfig.apiUrl}/get-cond-op'),
+          body: json.encode({"codigo_empresa": '0001'}),
+          headers: {"Content-Type": "application/json"},
+        );
+
+        if (response.statusCode == 200) {
+          final responseData = json.decode(response.body);
+          final SharedPreferences prefs = await SharedPreferences.getInstance();
+          await prefs.setString('condOp_cache', json.encode(responseData));
+          setState(() {
+            _condOpList = List<Map<String, dynamic>>.from(responseData);
+          });
+        } else {
+          await _loadCondOpFromPrefs();
+        }
+      } else {
+        await _loadCondOpFromPrefs();
+      }
+    } catch (e) {
+      await _loadCondOpFromPrefs();
+    }
+  }
+
+  Future<void> _fetchUnidadeMedidaFromApi() async {
+    try {
+      var connectivityResult = await (Connectivity().checkConnectivity());
+      if (connectivityResult != ConnectivityResult.none) {
+        final response = await http.post(
+          Uri.parse('${ApiConfig.apiUrl}/get-unidade-med'),
+          body: json.encode({"codigo_empresa": '0001'}),
+          headers: {"Content-Type": "application/json"},
+        );
+
+        if (response.statusCode == 200) {
+          final responseData = json.decode(response.body);
+          final SharedPreferences prefs = await SharedPreferences.getInstance();
+          await prefs.setString('unidade_cache', json.encode(responseData));
+          setState(() {
+            _unidadeMedidaList = List<Map<String, dynamic>>.from(responseData);
+          });
+        } else {
+          await _loadUnidadeMedidaFromPrefs();
+        }
+      } else {
+        await _loadUnidadeMedidaFromPrefs();
+      }
+    } catch (e) {
+      await _loadUnidadeMedidaFromPrefs();
+    }
+  }
+
+  Future<void> _loadPeriodicidadeFromPrefs() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
-    String cacheKey =
-        'componentes_cache_${searchText.replaceAll(RegExp('[^A-Za-z0-9]'), '')}';
+    var cachedData = prefs.getString('periodicidade_cache');
+
+    if (cachedData != null) {
+      setState(() {
+        _periodicidadeList =
+            List<Map<String, dynamic>>.from(json.decode(cachedData));
+      });
+    }
+  }
+
+  Future<void> _loadUnidadeMedidaFromPrefs() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    var cachedData = prefs.getString('unidade_cache');
+
+    if (cachedData != null) {
+      setState(() {
+        _unidadeMedidaList =
+            List<Map<String, dynamic>>.from(json.decode(cachedData));
+      });
+    }
+  }
+
+  Future<void> _loadAtvBreveFromPrefs() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    var cachedData = prefs.getString('atvBreve_cache');
+
+    if (cachedData != null) {
+      setState(() {
+        _atvBreveList =
+            List<Map<String, dynamic>>.from(json.decode(cachedData));
+      });
+    }
+  }
+
+  Future<void> _loadCondOpFromPrefs() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    var cachedData = prefs.getString('condOp_cache');
+
+    if (cachedData != null) {
+      setState(() {
+        _condOpList = List<Map<String, dynamic>>.from(json.decode(cachedData));
+      });
+    }
+  }
+
+  Future<int> salvarDados() async {
+    try {
+      String componentName = _componentController.text;
+      String componentCodigo = _componentCodeController.text;
+      String qtyPontos = _qtyPontosController.text;
+      String atvBreveName = _atvBreveController.text;
+      String atvBreveCodigo = _atvBreveCodeController.text;
+      String lubName = _materialController.text;
+      String lubCodigo = _materialCodeController.text;
+      String qtyMaterial = _qtyMaterialController.text;
+      String condOpName = _condOpController.text;
+      String condOpCodigo = _condOpCodeController.text;
+      String periodName = _periodicidadeController.text;
+      String tempoAtv = _tempoAtvController.text;
+      String periodCodigo = _periodicidadeCodeController.text;
+      String qtyPessoas = _qtyPessoasController.text;
+      String unidadeMedidaName = _unidadeMedidaController.text;
+      String unidadeMedidaCodigo = _unidadeMedidaCodeController.text;
+
+      Map<String, dynamic> ponto = {
+        'component_name': componentName,
+        'component_codigo': componentCodigo,
+        'qty_pontos': qtyPontos,
+        'atv_breve_name': atvBreveName,
+        'atv_breve_codigo': atvBreveCodigo,
+        'lub_name': lubName,
+        'lub_codigo': lubCodigo,
+        'qty_material': qtyMaterial,
+        'cond_op_name': condOpName,
+        'cond_op_codigo': condOpCodigo,
+        'period_name': periodName,
+        'period_codigo': periodCodigo,
+        'tempo_atv': tempoAtv,
+        'qty_pessoas': qtyPessoas,
+        'unidade_medida_name': unidadeMedidaName,
+        'unidade_medida_codigo': unidadeMedidaCodigo,
+        'plano_id': widget.planoId,
+      };
+
+      if (widget.pontoId != 0) {
+        ponto['id'] = widget.pontoId;
+        await _databaseHelper.updatePonto(ponto);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Editado com sucesso!'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) =>
+                PontoDetail(id: widget.pontoId, planoId: widget.planoId),
+          ),
+        );
+      } else {
+        await _databaseHelper.insertPontos(ponto);
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) =>
+                PontoDetail(id: widget.pontoId, planoId: widget.planoId),
+          ),
+        );
+      }
+      return widget.pontoId;
+    } catch (e) {
+      return -1;
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> _fetchData(String endpoint,
+      String searchText, String cacheKey, String offlineKey) async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
     var cachedData = prefs.getString(cacheKey);
 
     if (cachedData != null) {
-      var decodedData =
-          List<Map<String, dynamic>>.from(json.decode(cachedData));
-
-      return decodedData;
+      return List<Map<String, dynamic>>.from(json.decode(cachedData));
     }
 
-    print("No cache found for $searchText. Fetching from API.");
     var connectivityResult = await (Connectivity().checkConnectivity());
     if (connectivityResult == ConnectivityResult.none) {
-      return _carregarComponentesOffline(searchText);
+      return _fetchOfflineData(searchText, offlineKey);
     } else {
-      return _fetchComponentsFromApi(searchText);
+      return _fetchDataFromApi(endpoint, searchText, cacheKey, offlineKey);
     }
   }
 
-  Future<List<Map<String, dynamic>>> _fetchComponentsFromApi(
-      String searchText) async {
+  Future<List<Map<String, dynamic>>> _fetchDataFromApi(String endpoint,
+      String searchText, String cacheKey, String offlineKey) async {
     try {
-      final response = await http.post(
-        Uri.parse('${ApiConfig.apiUrl}/get-components'),
-        body:
-            json.encode({"codigo_empresa": '0001', "search_text": searchText}),
-        headers: {"Content-Type": "application/json"},
-      );
+      var connectivityResult = await (Connectivity().checkConnectivity());
+      if (connectivityResult != ConnectivityResult.none) {
+        final response = await http.post(
+          Uri.parse('${ApiConfig.apiUrl}/$endpoint'),
+          body: json
+              .encode({"codigo_empresa": '0001', "search_text": searchText}),
+          headers: {"Content-Type": "application/json"},
+        );
 
-      if (response.statusCode == 200) {
-        final responseData = json.decode(response.body);
-        final SharedPreferences prefs = await SharedPreferences.getInstance();
-        await prefs.setString(
-            'componentes_cache_$searchText', json.encode(responseData));
-        return List<Map<String, dynamic>>.from(responseData);
+        if (response.statusCode == 200) {
+          final responseData = json.decode(response.body);
+          final SharedPreferences prefs = await SharedPreferences.getInstance();
+          await prefs.setString(cacheKey, json.encode(responseData));
+          return List<Map<String, dynamic>>.from(responseData);
+        } else {
+          return _fetchOfflineData(searchText, offlineKey);
+        }
       } else {
-        print('Falha na requisição: ${response.statusCode}');
-        return _carregarComponentesOffline(
-            searchText); // Fallback para dados offline
+        return _fetchOfflineData(searchText, offlineKey);
       }
     } catch (e) {
-      print('Erro ao fazer a requisição: $e');
-      return _carregarComponentesOffline(
-          searchText); // Fallback para erro na requisição
+      return _fetchOfflineData(searchText, offlineKey);
     }
   }
 
-  Future<List<Map<String, dynamic>>> _carregarComponentesOffline(
-      String searchText) async {
+  Future<List<Map<String, dynamic>>> _fetchOfflineData(
+      String searchText, String offlineKey) async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
-    var allComponentsString = prefs
-        .getString('componentes'); // Cache genérico de todos os componentes
-    if (allComponentsString != null) {
-      List<Map<String, dynamic>> allComponents =
-          List<Map<String, dynamic>>.from(json.decode(allComponentsString));
-      return allComponents.where((component) {
-        final nomeComponente = component['descricao'] as String?;
-        return nomeComponente
-                ?.toLowerCase()
-                .contains(searchText.toLowerCase()) ??
+    final String? dataString = prefs.getString(offlineKey);
+
+    if (dataString != null) {
+      final List<dynamic> dataJson = json.decode(dataString);
+      return List<Map<String, dynamic>>.from(dataJson).where((item) {
+        final descricao = item['descricao'] as String?;
+        return descricao?.toLowerCase().contains(searchText.toLowerCase()) ??
             false;
       }).toList();
-    }
-    return []; // Lista vazia se não houver dados salvos
-  }
-
-  Future<List<Map<String, dynamic>>> _fetchAtvBreve(String searchText) async {
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
-    // Cria uma chave de cache específica para a pesquisa
-    String cacheKey =
-        'atividadeBreve_${searchText.replaceAll(RegExp('[^A-Za-z0-9]'), '')}';
-    var cachedData = prefs.getString(cacheKey);
-
-    if (cachedData != null) {
-      return List<Map<String, dynamic>>.from(json.decode(cachedData));
-    }
-
-    var connectivityResult = await (Connectivity().checkConnectivity());
-    if (connectivityResult == ConnectivityResult.none) {
-      return _carregarAtvBreveOffline(searchText);
-    } else {
-      return _fetchAtvBreveFromApi(searchText, cacheKey);
-    }
-  }
-
-  Future<List<Map<String, dynamic>>> _fetchAtvBreveFromApi(
-      String searchText, String cacheKey) async {
-    try {
-      final response = await http.post(
-        Uri.parse('${ApiConfig.apiUrl}/get-atividade-breve'),
-        body:
-            json.encode({"codigo_empresa": '0001', "search_text": searchText}),
-        headers: {"Content-Type": "application/json"},
-      );
-
-      if (response.statusCode == 200) {
-        final responseData = json.decode(response.body);
-        final SharedPreferences prefs = await SharedPreferences.getInstance();
-        await prefs.setString(cacheKey, json.encode(responseData));
-        return List<Map<String, dynamic>>.from(responseData);
-      } else {
-        return _carregarAtvBreveOffline(
-            searchText); // Fallback para dados offline
-      }
-    } catch (e) {
-      print('Erro ao fazer a requisição: $e');
-      return _carregarAtvBreveOffline(
-          searchText); // Fallback para erro na requisição
-    }
-  }
-
-  Future<List<Map<String, dynamic>>> _carregarAtvBreveOffline(
-      String searchText) async {
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
-    final String? atividadeBreveString = prefs.getString('atividadeBreve');
-
-    if (atividadeBreveString != null) {
-      final List<dynamic> atividadeBreveJson =
-          json.decode(atividadeBreveString);
-      List<Map<String, dynamic>> allActivities =
-          atividadeBreveJson.cast<Map<String, dynamic>>();
-
-      if (searchText.isNotEmpty) {
-        allActivities = allActivities.where((activity) {
-          // Add null safety check before calling toLowerCase
-          final descricao = activity['descricao'] as String?;
-          return descricao?.toLowerCase().contains(searchText.toLowerCase()) ??
-              false;
-        }).toList();
-      }
-
-      return allActivities;
-    } else {
-      return []; // Returns an empty list if there are no saved data
-    }
-  }
-
-  Future<List<Map<String, dynamic>>> _fetchMaterial(String searchText) async {
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
-    // Cria uma chave de cache específica para a pesquisa
-    String cacheKey =
-        'materiais_${searchText.replaceAll(RegExp('[^A-Za-z0-9]'), '')}';
-    var cachedData = prefs.getString(cacheKey);
-
-    if (cachedData != null) {
-      return List<Map<String, dynamic>>.from(json.decode(cachedData));
-    }
-
-    var connectivityResult = await (Connectivity().checkConnectivity());
-    if (connectivityResult == ConnectivityResult.none) {
-      return _carregarMateriaisOffline(searchText);
-    } else {
-      return _fetchMaterialFromApi(searchText, cacheKey);
-    }
-  }
-
-  Future<List<Map<String, dynamic>>> _fetchMaterialFromApi(
-      String searchText, String cacheKey) async {
-    try {
-      final response = await http.post(
-          Uri.parse('${ApiConfig.apiUrl}/get-material'),
-          body: json
-              .encode({"codigo_empresa": '0001', "search_text": searchText}),
-          headers: {"Content-Type": "application/json"});
-
-      if (response.statusCode == 200) {
-        final responseData = json.decode(response.body);
-        final SharedPreferences prefs = await SharedPreferences.getInstance();
-        await prefs.setString(
-            cacheKey,
-            json.encode(
-                responseData)); // Salva a resposta usando a chave de cache específica
-        return List<Map<String, dynamic>>.from(responseData);
-      } else {
-        return _carregarMateriaisOffline(
-            searchText); // Fallback para dados offline
-      }
-    } catch (e) {
-      return _carregarMateriaisOffline(
-          searchText); // Fallback para erro na requisição
-    }
-  }
-
-  Future<List<Map<String, dynamic>>> _carregarMateriaisOffline(
-      String searchText) async {
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
-    final String? materiaisString = prefs.getString('materiais');
-
-    if (materiaisString != null) {
-      final List<dynamic> materiaisJson = json.decode(materiaisString);
-      List<Map<String, dynamic>> allMaterials =
-          materiaisJson.cast<Map<String, dynamic>>();
-
-      if (searchText.isNotEmpty) {
-        allMaterials = allMaterials.where((material) {
-          // Add null safety check before calling toLowerCase
-          final nomeMaterial = material['descricao_produto'] as String?;
-          return nomeMaterial
-                  ?.toLowerCase()
-                  .contains(searchText.toLowerCase()) ??
-              false;
-        }).toList();
-      }
-
-      return allMaterials;
-    } else {
-      return []; // Returns an empty list if there are no saved data
-    }
-  }
-
-  Future<List<Map<String, dynamic>>> _fetchCondOp(String searchText) async {
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
-    // Cria uma chave de cache específica para a pesquisa
-    String cacheKey =
-        'condOp_${searchText.replaceAll(RegExp('[^A-Za-z0-9]'), '')}';
-    var cachedData = prefs.getString(cacheKey);
-
-    if (cachedData != null) {
-      return List<Map<String, dynamic>>.from(json.decode(cachedData));
-    }
-
-    var connectivityResult = await (Connectivity().checkConnectivity());
-    if (connectivityResult == ConnectivityResult.none) {
-      return _carregarCondOpOffline(searchText);
-    } else {
-      return _fetchCondOpFromApi(searchText, cacheKey);
-    }
-  }
-
-  Future<List<Map<String, dynamic>>> _fetchCondOpFromApi(
-      String searchText, String cacheKey) async {
-    try {
-      final response = await http.post(
-          Uri.parse('${ApiConfig.apiUrl}/get-cond-op'),
-          body: json
-              .encode({"codigo_empresa": '0001', "search_text": searchText}),
-          headers: {"Content-Type": "application/json"});
-
-      if (response.statusCode == 200) {
-        final responseData = json.decode(response.body);
-        final SharedPreferences prefs = await SharedPreferences.getInstance();
-        await prefs.setString(
-            cacheKey,
-            json.encode(
-                responseData)); // Salva a resposta usando a chave de cache específica
-        return List<Map<String, dynamic>>.from(responseData);
-      } else {
-        return _carregarCondOpOffline(
-            searchText); // Fallback para dados offline
-      }
-    } catch (e) {
-      return _carregarCondOpOffline(
-          searchText); // Fallback para erro na requisição
-    }
-  }
-
-  Future<List<Map<String, dynamic>>> _carregarCondOpOffline(
-      String searchText) async {
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
-    final String? condOpString = prefs.getString('condOp');
-
-    if (condOpString != null) {
-      final List<dynamic> condOpJson = json.decode(condOpString);
-      List<Map<String, dynamic>> allConditions =
-          condOpJson.cast<Map<String, dynamic>>();
-
-      if (searchText.isNotEmpty) {
-        allConditions = allConditions.where((condition) {
-          // Add null safety check before calling toLowerCase
-          final descricao = condition['descricao'] as String?;
-          return descricao?.toLowerCase().contains(searchText.toLowerCase()) ??
-              false;
-        }).toList();
-      }
-
-      return allConditions;
-    } else {
-      return []; // Returns an empty list if there are no saved data
-    }
-  }
-
-  Future<void> _loadPeriodicidade() async {
-    List<Map<String, dynamic>> periodicidadeList =
-        await _fetchPeriodicidade('');
-    setState(() {
-      _periodicidadeList = periodicidadeList;
-    });
-  }
-
-  Future<List<Map<String, dynamic>>> _fetchPeriodicidade(
-      String searchText) async {
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
-    String cacheKey =
-        'periodicidade_${searchText.replaceAll(RegExp('[^A-Za-z0-9]'), '')}';
-    var cachedData = prefs.getString(cacheKey);
-
-    if (cachedData != null) {
-      return List<Map<String, dynamic>>.from(json.decode(cachedData));
-    }
-
-    var connectivityResult = await (Connectivity().checkConnectivity());
-    if (connectivityResult == ConnectivityResult.none) {
-      return _carregarPeriodicidadeOffline(searchText);
-    } else {
-      return _fetchPeriodicidadeFromApi(searchText, cacheKey);
-    }
-  }
-
-  Future<List<Map<String, dynamic>>> _fetchPeriodicidadeFromApi(
-      String searchText, String cacheKey) async {
-    try {
-      final response = await http.post(
-        Uri.parse('${ApiConfig.apiUrl}/get-frequencia'),
-        body:
-            json.encode({"codigo_empresa": '0001', "search_text": searchText}),
-        headers: {"Content-Type": "application/json"},
-      );
-
-      if (response.statusCode == 200) {
-        final responseData = json.decode(response.body);
-        final SharedPreferences prefs = await SharedPreferences.getInstance();
-        await prefs.setString(cacheKey, json.encode(responseData));
-        return List<Map<String, dynamic>>.from(responseData);
-      } else {
-        return _carregarPeriodicidadeOffline(searchText);
-      }
-    } catch (e) {
-      return _carregarPeriodicidadeOffline(searchText);
-    }
-  }
-
-  Future<List<Map<String, dynamic>>> _carregarPeriodicidadeOffline(
-      String searchText) async {
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
-    final String? periodicidadeString = prefs.getString('periodicidade');
-
-    if (periodicidadeString != null) {
-      final List<dynamic> periodicidadeJson = json.decode(periodicidadeString);
-      List<Map<String, dynamic>> allPeriodicity =
-          periodicidadeJson.cast<Map<String, dynamic>>();
-
-      if (searchText.isNotEmpty) {
-        allPeriodicity = allPeriodicity.where((periodicity) {
-          final descricao = periodicity['descricao'] as String?;
-          return descricao?.toLowerCase().contains(searchText.toLowerCase()) ??
-              false;
-        }).toList();
-      }
-
-      return allPeriodicity;
     } else {
       return [];
     }
   }
 
-  Future<void> initializeData() async {
-    setState(() {
-      userDataLoaded = true;
-    });
-    await _fetchComponents('');
-    await _fetchAtvBreve('');
-    await _fetchMaterial('');
-    await _fetchCondOp('');
-    await _fetchPeriodicidade('');
+  Future<List<Map<String, dynamic>>> _fetchComponents(String searchText) async {
+    return _fetchData('get-components', searchText,
+        'componentes_cache_$searchText', 'componentes');
   }
 
-  @override
-  void initState() {
-    super.initState();
-    carregarDadosPonto();
-    initializeData();
+  Future<List<Map<String, dynamic>>> _fetchMaterial(String searchText) async {
+    return _fetchData(
+        'get-material', searchText, 'materiais_cache_$searchText', 'materiais');
   }
 
-  salvarDados() {
-    Map<String, dynamic> ponto = {
-      'component_name': _componentController.text,
-      'component_codigo': _componentCodeController.text,
-      'qty_pontos': _qtyPontosController.text,
-      'atv_breve_name': _atvBreveController.text,
-      'atv_breve_codigo': _atvBreveCodeController.text,
-      'lub_name': _materialController.text,
-      'lub_codigo': _materialCodeController.text,
-      'qty_material': _qtyMaterialController.text,
-      'cond_op_name': _condOpController.text,
-      'cond_op_codigo': _condOpCodeController.text,
-      'period_name': _periodicidadeController.text,
-      'period_codigo': _periodicidadeCodeController.text,
-      'qty_pessoas': _qtyPessoasController.text,
-      'tempo_atv': _tempoAtvController.text,
-    };
-
-    if (widget.pontoId != 0) {
-      ponto['id'] = widget.pontoId;
-      _databaseHelper.updatePonto(ponto);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Editado com sucesso!'),
-          duration: Duration(
-              seconds: 2), // Defina a duração desejada para exibir a mensagem
-        ),
-      );
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) =>
-              PontoDetail(id: widget.pontoId, planoId: widget.planoId),
-        ),
-      );
-    } else {
-      _databaseHelper.insertPontos(ponto);
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) =>
-              PontoDetail(id: widget.pontoId, planoId: widget.planoId),
-        ),
-      );
-    }
+  void _ensureUniqueValues(List<Map<String, dynamic>> list) {
+    final uniqueSet = <Map<String, dynamic>>{};
+    list.retainWhere((element) => uniqueSet.add(element));
   }
 
   @override
   Widget build(BuildContext context) {
+    // Garantir que não há duplicatas
+    _ensureUniqueValues(_periodicidadeList);
+    _ensureUniqueValues(_atvBreveList);
+    _ensureUniqueValues(_condOpList);
+    _ensureUniqueValues(_unidadeMedidaList);
+
     return Scaffold(
       appBar: AppBar(
         title: Center(
           child: Text(
-            'plano #$id'.toUpperCase(),
+            'PLANO #$id'.toUpperCase(),
             style: const TextStyle(
               color: Color(0xFF000000),
               fontSize: 16,
@@ -514,8 +495,9 @@ class _EditPontoState extends State<EditPonto> {
       body: SingleChildScrollView(
         child: SizedBox(
           width: double.infinity,
-          child: Column(children: [
-            Padding(
+          child: Column(
+            children: [
+              Padding(
                 padding: const EdgeInsets.all(8.0),
                 child: TypeAheadField<Map<String, dynamic>>(
                   textFieldConfiguration: TextFieldConfiguration(
@@ -526,19 +508,15 @@ class _EditPontoState extends State<EditPonto> {
                       border: OutlineInputBorder(),
                     ),
                   ),
-                  suggestionsCallback: (pattern) async {
-                    // Aqui faz a chamada ao método que possivelmente utiliza cache
-                    final suggestions = await _fetchComponents(pattern);
-                    return suggestions;
-                  },
+                  suggestionsCallback: _fetchComponents,
                   onSuggestionSelected: (suggestion) {
                     setState(() {
-                      _componentController.text = suggestion['codigo'];
-                      _componentCodeController.text = suggestion['descricao'];
+                      _componentController.text = suggestion['descricao'];
+                      _componentCodeController.text = suggestion['codigo'];
+                      _isComponentSelected = true;
                     });
                   },
                   itemBuilder: (context, Map<String, dynamic> suggestion) {
-                    // Renderiza a sugestão aqui
                     return ListTile(
                       title: Text(suggestion['descricao'] ?? ''),
                       subtitle: Row(
@@ -549,236 +527,318 @@ class _EditPontoState extends State<EditPonto> {
                       ),
                     );
                   },
-                )),
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: TextField(
-                controller: _qtyPontosController,
-                decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
-                  labelText: 'Quantidade de pontos: ',
                 ),
               ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: TypeAheadField<Map<String, dynamic>>(
-                textFieldConfiguration: TextFieldConfiguration(
-                  controller: _atvBreveController,
-                  enabled: userDataLoaded,
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: TextField(
+                  controller: _qtyPontosController,
+                  decoration: const InputDecoration(
+                    border: OutlineInputBorder(),
+                    labelText: 'Quantidade de pontos: ',
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: DropdownButtonFormField<Map<String, dynamic>>(
+                  value:
+                      _selectedAtvBreve!.isNotEmpty ? _selectedAtvBreve : null,
+                  onChanged: (newValue) {
+                    setState(() {
+                      _selectedAtvBreve = newValue!;
+                      _atvBreveController.text = newValue['descricao'];
+                      _atvBreveCodeController.text = newValue['codigo'];
+                      _isAtvBreveSelected = true;
+                    });
+                  },
+                  items: _atvBreveList.map((suggestion) {
+                    return DropdownMenuItem<Map<String, dynamic>>(
+                      value: suggestion,
+                      child: Row(
+                        children: [
+                          SizedBox(
+                            width: 300,
+                            child: Text(
+                              suggestion['descricao'] ?? '',
+                              style: const TextStyle(
+                                fontSize: 14,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
                   decoration: const InputDecoration(
                     labelText: 'Atividade Breve:',
                     border: OutlineInputBorder(),
                   ),
                 ),
-                suggestionsCallback: (pattern) async {
-                  final suggestions = await _fetchAtvBreve(
-                      pattern); // Faz a chamada à API com o texto de pesquisa
-                  return suggestions;
-                },
-                onSuggestionSelected: (suggestion) {
-                  setState(() {
-                    _atvBreveController.text = suggestion['descricao'];
-                    _atvBreveCodeController.text = suggestion['codigo'];
-                  });
-                },
-                itemBuilder: (context, Map<String, dynamic> suggestion) {
-                  // Renderize a sugestão aqui
-                  return ListTile(
-                    title: Text(suggestion['descricao'] ?? ''),
-                    subtitle: Row(
-                      children: [
-                        Text(suggestion['codigo'] ?? ''),
-                        const SizedBox(width: 10),
-                      ],
-                    ),
-                  );
-                },
               ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: TypeAheadField<Map<String, dynamic>>(
-                textFieldConfiguration: TextFieldConfiguration(
-                  controller: _materialController,
-                  enabled: userDataLoaded,
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: TypeAheadField<Map<String, dynamic>>(
+                  textFieldConfiguration: TextFieldConfiguration(
+                    controller: _materialController,
+                    enabled: userDataLoaded,
+                    decoration: const InputDecoration(
+                      labelText: 'Nome do lubrificante (material):',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  suggestionsCallback: _fetchMaterial,
+                  onSuggestionSelected: (suggestion) {
+                    setState(() {
+                      _materialController.text =
+                          suggestion['descricao_produto'];
+                      _materialCodeController.text =
+                          suggestion['codigo_produto'];
+                      _isMaterialSelected = true;
+
+                      // Atualiza a unidade de medida selecionada
+                      _selectedUnidadeMedida = _unidadeMedidaList.firstWhere(
+                        (element) =>
+                            element['descricao_unidade_medida'] ==
+                            suggestion['unidade_medida'],
+                        orElse: () => {
+                          'descricao_unidade_medida':
+                              suggestion['unidade_medida'],
+                          'codigo_unidade_medida': ''
+                        },
+                      );
+
+                      // Se a unidade de medida não estiver na lista, adicione-a
+                      if (!_unidadeMedidaList
+                          .contains(_selectedUnidadeMedida)) {
+                        _unidadeMedidaList.add(_selectedUnidadeMedida!);
+                      }
+                    });
+                  },
+                  itemBuilder: (context, Map<String, dynamic> suggestion) {
+                    return ListTile(
+                      title: Text(suggestion['descricao_produto'] ?? ''),
+                      subtitle: Row(
+                        children: [
+                          Text(suggestion['codigo_produto'] ?? ''),
+                          const SizedBox(width: 10),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: TextField(
+                  controller: _qtyMaterialController,
                   decoration: const InputDecoration(
-                    labelText: 'Nome do lubrificante (material):',
                     border: OutlineInputBorder(),
+                    labelText: 'Quantidade de material: ',
                   ),
                 ),
-                suggestionsCallback: (pattern) async {
-                  final suggestions = await _fetchMaterial(
-                      pattern); // Faz a chamada à API com o texto de pesquisa
-                  return suggestions;
-                },
-                onSuggestionSelected: (suggestion) {
-                  setState(() {
-                    _materialController.text = suggestion['descricao_produto'];
-                    _materialCodeController.text = suggestion['codigo_produto'];
-                  });
-                },
-                itemBuilder: (context, Map<String, dynamic> suggestion) {
-                  // Renderize a sugestão aqui
-                  return ListTile(
-                    title: Text(suggestion['descricao_produto'] ?? ''),
-                    subtitle: Row(
-                      children: [
-                        Text(suggestion['codigo_produto'] ?? ''),
-                        const SizedBox(width: 10),
-                      ],
-                    ),
-                  );
-                },
               ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: TextField(
-                controller: _qtyMaterialController,
-                decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
-                  labelText: 'Quantidade de material: ',
-                ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: TypeAheadField<Map<String, dynamic>>(
-                textFieldConfiguration: TextFieldConfiguration(
-                  controller: _condOpController,
-                  enabled: userDataLoaded,
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: DropdownButtonFormField<Map<String, dynamic>>(
+                  value: _selectedCondOp!.isNotEmpty ? _selectedCondOp : null,
+                  onChanged: (newValue) {
+                    setState(() {
+                      _selectedCondOp = newValue!;
+                      _condOpController.text = newValue['descricao'];
+                      _condOpCodeController.text = newValue['codigo'];
+                      _isCondOpSelected = true;
+                    });
+                  },
+                  items: _condOpList.map((suggestion) {
+                    return DropdownMenuItem<Map<String, dynamic>>(
+                      value: suggestion,
+                      child: Row(
+                        children: [
+                          Text(
+                            suggestion['descricao'] ?? '',
+                            style: const TextStyle(fontSize: 14),
+                          ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
                   decoration: const InputDecoration(
                     labelText: 'Condição de operação:',
                     border: OutlineInputBorder(),
                   ),
                 ),
-                suggestionsCallback: (pattern) async {
-                  final suggestions = await _fetchCondOp(
-                      pattern); // Faz a chamada à API com o texto de pesquisa
-                  return suggestions;
-                },
-                onSuggestionSelected: (suggestion) {
-                  setState(() {
-                    _condOpController.text = suggestion['descricao'];
-                    _condOpCodeController.text = suggestion['codigo'];
-                  });
-                },
-                itemBuilder: (context, Map<String, dynamic> suggestion) {
-                  // Renderize a sugestão aqui
-                  return ListTile(
-                    title: Text(suggestion['descricao'] ?? ''),
-                    subtitle: Row(
-                      children: [
-                        Text(suggestion['codigo'] ?? ''),
-                        const SizedBox(width: 10),
-                      ],
-                    ),
-                  );
-                },
               ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: DropdownButtonFormField<Map<String, dynamic>>(
-                value: _selectedPeriodicidade,
-                onChanged: userDataLoaded
-                    ? (Map<String, dynamic>? newValue) {
-                        setState(() {
-                          _selectedPeriodicidade = newValue;
-                          _periodicidadeController.text =
-                              newValue?['descricao'] ?? '';
-                          _periodicidadeCodeController.text =
-                              newValue?['codigo'] ?? '';
-                        });
-                      }
-                    : null,
-                decoration: const InputDecoration(
-                  labelText: 'Periodicidade:',
-                  border: OutlineInputBorder(),
-                ),
-                items: _periodicidadeList
-                    .map<DropdownMenuItem<Map<String, dynamic>>>(
-                        (Map<String, dynamic> value) {
-                  return DropdownMenuItem<Map<String, dynamic>>(
-                    value: value,
-                    child: ListTile(
-                      title: Text(value['descricao'] ?? ''),
-                      subtitle: Row(
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: DropdownButtonFormField<Map<String, dynamic>>(
+                  value: _selectedPeriodicidade!.isNotEmpty
+                      ? _selectedPeriodicidade
+                      : null,
+                  onChanged: (newValue) {
+                    setState(() {
+                      _selectedPeriodicidade = newValue!;
+                      _periodicidadeController.text = newValue['descricao'];
+                      _periodicidadeCodeController.text = newValue['codigo'];
+                      _isPeriodicidadeSelected = true;
+                    });
+                  },
+                  items: _periodicidadeList.map((suggestion) {
+                    return DropdownMenuItem<Map<String, dynamic>>(
+                      value: suggestion,
+                      child: Row(
                         children: [
-                          Text(value['codigo'] ?? ''),
+                          Text(suggestion['descricao'] ?? ''),
                           const SizedBox(width: 10),
+                          Text(suggestion['codigo'] ?? ''),
                         ],
                       ),
-                    ),
-                  );
-                }).toList(),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: TextField(
-                controller: _tempoAtvController,
-                decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
-                  labelText: 'Tempo da atividade: ',
+                    );
+                  }).toList(),
+                  decoration: const InputDecoration(
+                    labelText: 'Periodicidade:',
+                    border: OutlineInputBorder(),
+                  ),
                 ),
               ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: TextField(
-                controller: _qtyPessoasController,
-                decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
-                  labelText: 'Quantidade de pessoas: ',
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: DropdownButtonFormField<Map<String, dynamic>>(
+                  value: _selectedUnidadeMedida!.isNotEmpty
+                      ? _selectedUnidadeMedida
+                      : null,
+                  onChanged: (newValue) {
+                    setState(() {
+                      _selectedUnidadeMedida = newValue!;
+                      _unidadeMedidaController.text =
+                          newValue['descricao_unidade_medida'];
+                      _unidadeMedidaCodeController.text =
+                          newValue['codigo_unidade_medida'];
+                      _isUnidadeMedidaSelected = true;
+                    });
+                  },
+                  items: _unidadeMedidaList.map((suggestion) {
+                    return DropdownMenuItem<Map<String, dynamic>>(
+                      value: suggestion,
+                      child: Row(
+                        children: [
+                          Text(suggestion['descricao_unidade_medida'] ?? ''),
+                          const SizedBox(width: 10),
+                          Text(suggestion['codigo_unidade_medida'] ?? ''),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                  decoration: const InputDecoration(
+                    labelText: 'Unidade de Medida:',
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (value) {
+                    if (value == null) {
+                      return 'Por favor, selecione uma unidade de medida';
+                    }
+                    return null;
+                  },
                 ),
               ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  SizedBox(
-                    width: 180,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        foregroundColor: Colors.white,
-                        backgroundColor: Colors.black,
-                        elevation: 2,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                      onPressed: () {
-                        Navigator.of(context).pop();
-                      },
-                      child: const Text('Cancelar'),
-                    ),
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: TextField(
+                  controller: _tempoAtvController,
+                  decoration: const InputDecoration(
+                    border: OutlineInputBorder(),
+                    labelText: 'Tempo da atividade: ',
                   ),
-                  SizedBox(
-                    width: 180,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        foregroundColor: Colors.black,
-                        backgroundColor: ColorConfig.amarelo,
-                        elevation: 2,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                      onPressed: () async {
-                        int ponto = await salvarDados();
-                      },
-                      child: const Text('Salvar'),
-                    ),
-                  ),
-                ],
+                ),
               ),
-            )
-          ]),
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: TextField(
+                  controller: _qtyPessoasController,
+                  decoration: const InputDecoration(
+                    border: OutlineInputBorder(),
+                    labelText: 'Quantidade de pessoas: ',
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    SizedBox(
+                      width: 180,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          foregroundColor: Colors.white,
+                          backgroundColor: Colors.black,
+                          elevation: 2,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                        },
+                        child: const Text('Cancelar'),
+                      ),
+                    ),
+                    SizedBox(
+                      width: 180,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          foregroundColor: Colors.black,
+                          backgroundColor: ColorConfig.amarelo,
+                          elevation: 2,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        onPressed: () async {
+                          if (!_isComponentSelected ||
+                              !_isAtvBreveSelected ||
+                              !_isMaterialSelected ||
+                              !_isCondOpSelected ||
+                              !_isPeriodicidadeSelected) {
+                            showDialog(
+                              context: context,
+                              builder: (context) => AlertDialog(
+                                title: const Text("Erro"),
+                                content: const Text(
+                                    "Por favor, selecione todos os valores."),
+                                actions: <Widget>[
+                                  TextButton(
+                                    onPressed: () =>
+                                        Navigator.of(context).pop(),
+                                    child: const Text("OK"),
+                                  ),
+                                ],
+                              ),
+                            );
+                          } else {
+                            int idPonto = await salvarDados();
+                            if (idPonto != -1) {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => PontoDetail(
+                                      id: widget.pontoId,
+                                      planoId: widget.planoId),
+                                ),
+                              );
+                            }
+                          }
+                        },
+                        child: const Text('Salvar'),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
