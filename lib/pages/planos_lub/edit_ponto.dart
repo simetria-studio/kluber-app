@@ -26,10 +26,10 @@ class _EditPontoState extends State<EditPonto> {
   bool _isCondOpSelected = false;
   bool _isPeriodicidadeSelected = false;
   bool _isUnidadeMedidaSelected = false;
-  Map<String, dynamic>? _selectedPeriodicidade;
-  Map<String, dynamic>? _selectedAtvBreve;
-  Map<String, dynamic>? _selectedCondOp;
-  Map<String, dynamic>? _selectedUnidadeMedida;
+  Map<String, dynamic>? _selectedPeriodicidade = {};
+  Map<String, dynamic>? _selectedAtvBreve = {};
+  Map<String, dynamic>? _selectedCondOp = {};
+  Map<String, dynamic>? _selectedUnidadeMedida = {};
 
   final DatabaseHelper _databaseHelper = DatabaseHelper();
   final TextEditingController _componentController = TextEditingController();
@@ -66,21 +66,28 @@ class _EditPontoState extends State<EditPonto> {
   int id = 0;
   final databaseHelper = DatabaseHelper();
 
+  late Future<void> _initializeFuture;
+
   @override
   void initState() {
     super.initState();
-    initializeData();
+    _initializeFuture = initializeData();
   }
 
   Future<void> initializeData() async {
-    await _fetchPeriodicidade();
-    await _fetchAtvBreve();
-    await _fetchCondOp();
-    await _fetchUnidadeMedida();
-    await carregarDadosPonto();
-    setState(() {
-      userDataLoaded = true;
-    });
+    try {
+      await _fetchPeriodicidade();
+      await _fetchAtvBreve();
+      await _fetchCondOp();
+      await _fetchUnidadeMedida();
+      await carregarDadosPonto();
+      setState(() {
+        userDataLoaded = true;
+      });
+      print("Data loaded successfully");
+    } catch (e) {
+      print("Error loading data: $e");
+    }
   }
 
   Future<void> carregarDadosPonto() async {
@@ -102,7 +109,6 @@ class _EditPontoState extends State<EditPonto> {
         _qtyPessoasController.text = ponto['qty_pessoas'];
         _tempoAtvController.text = ponto['tempo_atv'];
 
-        // Atualiza os valores selecionados com os dados carregados
         _selectedAtvBreve = _atvBreveList.firstWhere(
           (element) => element['codigo'] == ponto['atv_breve_codigo'],
           orElse: () => <String, dynamic>{},
@@ -163,25 +169,20 @@ class _EditPontoState extends State<EditPonto> {
 
   Future<void> _fetchPeriodicidadeFromApi() async {
     try {
-      var connectivityResult = await (Connectivity().checkConnectivity());
-      if (connectivityResult != ConnectivityResult.none) {
-        final response = await http.post(
-          Uri.parse('${ApiConfig.apiUrl}/get-frequencia'),
-          body: json.encode({"codigo_empresa": '0001'}),
-          headers: {"Content-Type": "application/json"},
-        );
+      final response = await http.post(
+        Uri.parse('${ApiConfig.apiUrl}/get-frequencia'),
+        body: json.encode({"codigo_empresa": '0001'}),
+        headers: {"Content-Type": "application/json"},
+      );
 
-        if (response.statusCode == 200) {
-          final responseData = json.decode(response.body);
-          final SharedPreferences prefs = await SharedPreferences.getInstance();
-          await prefs.setString(
-              'periodicidade_cache', json.encode(responseData));
-          setState(() {
-            _periodicidadeList = List<Map<String, dynamic>>.from(responseData);
-          });
-        } else {
-          await _loadPeriodicidadeFromPrefs();
-        }
+      if (response.statusCode == 200) {
+        final responseData = json.decode(response.body);
+        final SharedPreferences prefs = await SharedPreferences.getInstance();
+        await prefs.setString('periodicidade_cache', json.encode(responseData));
+        setState(() {
+          _periodicidadeList = List<Map<String, dynamic>>.from(responseData);
+        });
+        print("Periodicidade fetched from API");
       } else {
         await _loadPeriodicidadeFromPrefs();
       }
@@ -192,24 +193,20 @@ class _EditPontoState extends State<EditPonto> {
 
   Future<void> _fetchAtvBreveFromApi() async {
     try {
-      var connectivityResult = await (Connectivity().checkConnectivity());
-      if (connectivityResult != ConnectivityResult.none) {
-        final response = await http.post(
-          Uri.parse('${ApiConfig.apiUrl}/get-atividade-breve'),
-          body: json.encode({"codigo_empresa": '0001'}),
-          headers: {"Content-Type": "application/json"},
-        );
+      final response = await http.post(
+        Uri.parse('${ApiConfig.apiUrl}/get-atividade-breve'),
+        body: json.encode({"codigo_empresa": '0001'}),
+        headers: {"Content-Type": "application/json"},
+      );
 
-        if (response.statusCode == 200) {
-          final responseData = json.decode(response.body);
-          final SharedPreferences prefs = await SharedPreferences.getInstance();
-          await prefs.setString('atvBreve_cache', json.encode(responseData));
-          setState(() {
-            _atvBreveList = List<Map<String, dynamic>>.from(responseData);
-          });
-        } else {
-          await _loadAtvBreveFromPrefs();
-        }
+      if (response.statusCode == 200) {
+        final responseData = json.decode(response.body);
+        final SharedPreferences prefs = await SharedPreferences.getInstance();
+        await prefs.setString('atvBreve_cache', json.encode(responseData));
+        setState(() {
+          _atvBreveList = List<Map<String, dynamic>>.from(responseData);
+        });
+        print("AtvBreve fetched from API");
       } else {
         await _loadAtvBreveFromPrefs();
       }
@@ -220,24 +217,20 @@ class _EditPontoState extends State<EditPonto> {
 
   Future<void> _fetchCondOpFromApi() async {
     try {
-      var connectivityResult = await (Connectivity().checkConnectivity());
-      if (connectivityResult != ConnectivityResult.none) {
-        final response = await http.post(
-          Uri.parse('${ApiConfig.apiUrl}/get-cond-op'),
-          body: json.encode({"codigo_empresa": '0001'}),
-          headers: {"Content-Type": "application/json"},
-        );
+      final response = await http.post(
+        Uri.parse('${ApiConfig.apiUrl}/get-cond-op'),
+        body: json.encode({"codigo_empresa": '0001'}),
+        headers: {"Content-Type": "application/json"},
+      );
 
-        if (response.statusCode == 200) {
-          final responseData = json.decode(response.body);
-          final SharedPreferences prefs = await SharedPreferences.getInstance();
-          await prefs.setString('condOp_cache', json.encode(responseData));
-          setState(() {
-            _condOpList = List<Map<String, dynamic>>.from(responseData);
-          });
-        } else {
-          await _loadCondOpFromPrefs();
-        }
+      if (response.statusCode == 200) {
+        final responseData = json.decode(response.body);
+        final SharedPreferences prefs = await SharedPreferences.getInstance();
+        await prefs.setString('condOp_cache', json.encode(responseData));
+        setState(() {
+          _condOpList = List<Map<String, dynamic>>.from(responseData);
+        });
+        print("CondOp fetched from API");
       } else {
         await _loadCondOpFromPrefs();
       }
@@ -248,24 +241,20 @@ class _EditPontoState extends State<EditPonto> {
 
   Future<void> _fetchUnidadeMedidaFromApi() async {
     try {
-      var connectivityResult = await (Connectivity().checkConnectivity());
-      if (connectivityResult != ConnectivityResult.none) {
-        final response = await http.post(
-          Uri.parse('${ApiConfig.apiUrl}/get-unidade-med'),
-          body: json.encode({"codigo_empresa": '0001'}),
-          headers: {"Content-Type": "application/json"},
-        );
+      final response = await http.post(
+        Uri.parse('${ApiConfig.apiUrl}/get-unidade-med'),
+        body: json.encode({"codigo_empresa": '0001'}),
+        headers: {"Content-Type": "application/json"},
+      );
 
-        if (response.statusCode == 200) {
-          final responseData = json.decode(response.body);
-          final SharedPreferences prefs = await SharedPreferences.getInstance();
-          await prefs.setString('unidade_cache', json.encode(responseData));
-          setState(() {
-            _unidadeMedidaList = List<Map<String, dynamic>>.from(responseData);
-          });
-        } else {
-          await _loadUnidadeMedidaFromPrefs();
-        }
+      if (response.statusCode == 200) {
+        final responseData = json.decode(response.body);
+        final SharedPreferences prefs = await SharedPreferences.getInstance();
+        await prefs.setString('unidade_cache', json.encode(responseData));
+        setState(() {
+          _unidadeMedidaList = List<Map<String, dynamic>>.from(responseData);
+        });
+        print("UnidadeMedida fetched from API");
       } else {
         await _loadUnidadeMedidaFromPrefs();
       }
@@ -283,6 +272,7 @@ class _EditPontoState extends State<EditPonto> {
         _periodicidadeList =
             List<Map<String, dynamic>>.from(json.decode(cachedData));
       });
+      print("Periodicidade loaded from cache");
     }
   }
 
@@ -295,6 +285,7 @@ class _EditPontoState extends State<EditPonto> {
         _unidadeMedidaList =
             List<Map<String, dynamic>>.from(json.decode(cachedData));
       });
+      print("UnidadeMedida loaded from cache");
     }
   }
 
@@ -307,6 +298,7 @@ class _EditPontoState extends State<EditPonto> {
         _atvBreveList =
             List<Map<String, dynamic>>.from(json.decode(cachedData));
       });
+      print("AtvBreve loaded from cache");
     }
   }
 
@@ -318,6 +310,7 @@ class _EditPontoState extends State<EditPonto> {
       setState(() {
         _condOpList = List<Map<String, dynamic>>.from(json.decode(cachedData));
       });
+      print("CondOp loaded from cache");
     }
   }
 
@@ -388,6 +381,7 @@ class _EditPontoState extends State<EditPonto> {
       }
       return widget.pontoId;
     } catch (e) {
+      print("Error saving data: $e");
       return -1;
     }
   }
@@ -412,23 +406,18 @@ class _EditPontoState extends State<EditPonto> {
   Future<List<Map<String, dynamic>>> _fetchDataFromApi(String endpoint,
       String searchText, String cacheKey, String offlineKey) async {
     try {
-      var connectivityResult = await (Connectivity().checkConnectivity());
-      if (connectivityResult != ConnectivityResult.none) {
-        final response = await http.post(
-          Uri.parse('${ApiConfig.apiUrl}/$endpoint'),
-          body: json
-              .encode({"codigo_empresa": '0001', "search_text": searchText}),
-          headers: {"Content-Type": "application/json"},
-        );
+      final response = await http.post(
+        Uri.parse('${ApiConfig.apiUrl}/$endpoint'),
+        body:
+            json.encode({"codigo_empresa": '0001', "search_text": searchText}),
+        headers: {"Content-Type": "application/json"},
+      );
 
-        if (response.statusCode == 200) {
-          final responseData = json.decode(response.body);
-          final SharedPreferences prefs = await SharedPreferences.getInstance();
-          await prefs.setString(cacheKey, json.encode(responseData));
-          return List<Map<String, dynamic>>.from(responseData);
-        } else {
-          return _fetchOfflineData(searchText, offlineKey);
-        }
+      if (response.statusCode == 200) {
+        final responseData = json.decode(response.body);
+        final SharedPreferences prefs = await SharedPreferences.getInstance();
+        await prefs.setString(cacheKey, json.encode(responseData));
+        return List<Map<String, dynamic>>.from(responseData);
       } else {
         return _fetchOfflineData(searchText, offlineKey);
       }
@@ -471,17 +460,11 @@ class _EditPontoState extends State<EditPonto> {
 
   @override
   Widget build(BuildContext context) {
-    // Garantir que não há duplicatas
-    _ensureUniqueValues(_periodicidadeList);
-    _ensureUniqueValues(_atvBreveList);
-    _ensureUniqueValues(_condOpList);
-    _ensureUniqueValues(_unidadeMedidaList);
-
     return Scaffold(
       appBar: AppBar(
         title: Center(
           child: Text(
-            'PLANO #$id'.toUpperCase(),
+            'PLANO #${widget.planoId}'.toUpperCase(),
             style: const TextStyle(
               color: Color(0xFF000000),
               fontSize: 16,
@@ -492,353 +475,352 @@ class _EditPontoState extends State<EditPonto> {
         ),
         backgroundColor: ColorConfig.amarelo,
       ),
-      body: SingleChildScrollView(
-        child: SizedBox(
-          width: double.infinity,
-          child: Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: TypeAheadField<Map<String, dynamic>>(
-                  textFieldConfiguration: TextFieldConfiguration(
-                    controller: _componentController,
-                    enabled: userDataLoaded,
-                    decoration: const InputDecoration(
-                      labelText: 'Componente:',
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                  suggestionsCallback: _fetchComponents,
-                  onSuggestionSelected: (suggestion) {
-                    setState(() {
-                      _componentController.text = suggestion['descricao'];
-                      _componentCodeController.text = suggestion['codigo'];
-                      _isComponentSelected = true;
-                    });
-                  },
-                  itemBuilder: (context, Map<String, dynamic> suggestion) {
-                    return ListTile(
-                      title: Text(suggestion['descricao'] ?? ''),
-                      subtitle: Row(
-                        children: [
-                          Text(suggestion['codigo'] ?? ''),
-                          const SizedBox(width: 10),
-                        ],
-                      ),
-                    );
-                  },
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: TextField(
-                  controller: _qtyPontosController,
+      body: FutureBuilder<void>(
+        future: _initializeFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          } else if (snapshot.hasError) {
+            return Center(
+                child: Text('Erro ao carregar dados: ${snapshot.error}'));
+          } else {
+            return _buildForm();
+          }
+        },
+      ),
+    );
+  }
+
+  Widget _buildForm() {
+    _ensureUniqueValues(_periodicidadeList);
+    _ensureUniqueValues(_atvBreveList);
+    _ensureUniqueValues(_condOpList);
+    _ensureUniqueValues(_unidadeMedidaList);
+
+    return SingleChildScrollView(
+      child: SizedBox(
+        width: double.infinity,
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: TypeAheadField<Map<String, dynamic>>(
+                textFieldConfiguration: TextFieldConfiguration(
+                  controller: _componentController,
+                  enabled: userDataLoaded,
                   decoration: const InputDecoration(
+                    labelText: 'Componente:',
                     border: OutlineInputBorder(),
-                    labelText: 'Quantidade de pontos: ',
                   ),
                 ),
+                suggestionsCallback: _fetchComponents,
+                onSuggestionSelected: (suggestion) {
+                  setState(() {
+                    _componentController.text = suggestion['descricao'];
+                    _componentCodeController.text = suggestion['codigo'];
+                    _isComponentSelected = true;
+                  });
+                },
+                itemBuilder: (context, Map<String, dynamic> suggestion) {
+                  return ListTile(
+                    title: Text(suggestion['descricao'] ?? ''),
+                    subtitle: Row(
+                      children: [
+                        Text(suggestion['codigo'] ?? ''),
+                        const SizedBox(width: 10),
+                      ],
+                    ),
+                  );
+                },
               ),
-              Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: DropdownButtonFormField<Map<String, dynamic>>(
-                  value:
-                      _selectedAtvBreve!.isNotEmpty ? _selectedAtvBreve : null,
-                  onChanged: (newValue) {
-                    setState(() {
-                      _selectedAtvBreve = newValue!;
-                      _atvBreveController.text = newValue['descricao'];
-                      _atvBreveCodeController.text = newValue['codigo'];
-                      _isAtvBreveSelected = true;
-                    });
-                  },
-                  items: _atvBreveList.map((suggestion) {
-                    return DropdownMenuItem<Map<String, dynamic>>(
-                      value: suggestion,
-                      child: Row(
-                        children: [
-                          SizedBox(
-                            width: 300,
-                            child: Text(
-                              suggestion['descricao'] ?? '',
-                              style: const TextStyle(
-                                fontSize: 14,
-                                overflow: TextOverflow.ellipsis,
-                              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: TextField(
+                controller: _qtyPontosController,
+                decoration: const InputDecoration(
+                  border: OutlineInputBorder(),
+                  labelText: 'Quantidade de pontos: ',
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: DropdownButtonFormField<Map<String, dynamic>>(
+                value:
+                    _selectedAtvBreve != null && _selectedAtvBreve!.isNotEmpty
+                        ? _selectedAtvBreve
+                        : null,
+                onChanged: (newValue) {
+                  setState(() {
+                    _selectedAtvBreve = newValue!;
+                    _atvBreveController.text = newValue['descricao'];
+                    _atvBreveCodeController.text = newValue['codigo'];
+                    _isAtvBreveSelected = true;
+                  });
+                },
+                items: _atvBreveList.map((suggestion) {
+                  return DropdownMenuItem<Map<String, dynamic>>(
+                    value: suggestion,
+                    child: Row(
+                      children: [
+                        SizedBox(
+                          width: 300,
+                          child: Text(
+                            suggestion['descricao'] ?? '',
+                            style: const TextStyle(
+                              fontSize: 14,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                        ],
-                      ),
-                    );
-                  }).toList(),
+                        ),
+                      ],
+                    ),
+                  );
+                }).toList(),
+                decoration: const InputDecoration(
+                  labelText: 'Atividade Breve:',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: TypeAheadField<Map<String, dynamic>>(
+                textFieldConfiguration: TextFieldConfiguration(
+                  controller: _materialController,
+                  enabled: userDataLoaded,
                   decoration: const InputDecoration(
-                    labelText: 'Atividade Breve:',
+                    labelText: 'Nome do lubrificante (material):',
                     border: OutlineInputBorder(),
                   ),
                 ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: TypeAheadField<Map<String, dynamic>>(
-                  textFieldConfiguration: TextFieldConfiguration(
-                    controller: _materialController,
-                    enabled: userDataLoaded,
-                    decoration: const InputDecoration(
-                      labelText: 'Nome do lubrificante (material):',
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                  suggestionsCallback: _fetchMaterial,
-                  onSuggestionSelected: (suggestion) {
-                    setState(() {
-                      _materialController.text =
-                          suggestion['descricao_produto'];
-                      _materialCodeController.text =
-                          suggestion['codigo_produto'];
-                      _isMaterialSelected = true;
+                suggestionsCallback: _fetchMaterial,
+                onSuggestionSelected: (suggestion) {
+                  setState(() {
+                    _materialController.text = suggestion['descricao_produto'];
+                    _materialCodeController.text = suggestion['codigo_produto'];
+                    _isMaterialSelected = true;
 
-                      // Atualiza a unidade de medida selecionada
-                      _selectedUnidadeMedida = _unidadeMedidaList.firstWhere(
-                        (element) =>
-                            element['descricao_unidade_medida'] ==
+                    _selectedUnidadeMedida = _unidadeMedidaList.firstWhere(
+                      (element) =>
+                          element['descricao_unidade_medida'] ==
+                          suggestion['unidade_medida'],
+                      orElse: () => {
+                        'descricao_unidade_medida':
                             suggestion['unidade_medida'],
-                        orElse: () => {
-                          'descricao_unidade_medida':
-                              suggestion['unidade_medida'],
-                          'codigo_unidade_medida': ''
-                        },
-                      );
+                        'codigo_unidade_medida': ''
+                      },
+                    );
 
-                      // Se a unidade de medida não estiver na lista, adicione-a
-                      if (!_unidadeMedidaList
-                          .contains(_selectedUnidadeMedida)) {
-                        _unidadeMedidaList.add(_selectedUnidadeMedida!);
-                      }
-                    });
-                  },
-                  itemBuilder: (context, Map<String, dynamic> suggestion) {
-                    return ListTile(
-                      title: Text(suggestion['descricao_produto'] ?? ''),
-                      subtitle: Row(
-                        children: [
-                          Text(suggestion['codigo_produto'] ?? ''),
-                          const SizedBox(width: 10),
-                        ],
-                      ),
-                    );
-                  },
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: TextField(
-                  controller: _qtyMaterialController,
-                  decoration: const InputDecoration(
-                    border: OutlineInputBorder(),
-                    labelText: 'Quantidade de material: ',
-                  ),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: DropdownButtonFormField<Map<String, dynamic>>(
-                  value: _selectedCondOp!.isNotEmpty ? _selectedCondOp : null,
-                  onChanged: (newValue) {
-                    setState(() {
-                      _selectedCondOp = newValue!;
-                      _condOpController.text = newValue['descricao'];
-                      _condOpCodeController.text = newValue['codigo'];
-                      _isCondOpSelected = true;
-                    });
-                  },
-                  items: _condOpList.map((suggestion) {
-                    return DropdownMenuItem<Map<String, dynamic>>(
-                      value: suggestion,
-                      child: Row(
-                        children: [
-                          Text(
-                            suggestion['descricao'] ?? '',
-                            style: const TextStyle(fontSize: 14),
-                          ),
-                        ],
-                      ),
-                    );
-                  }).toList(),
-                  decoration: const InputDecoration(
-                    labelText: 'Condição de operação:',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: DropdownButtonFormField<Map<String, dynamic>>(
-                  value: _selectedPeriodicidade!.isNotEmpty
-                      ? _selectedPeriodicidade
-                      : null,
-                  onChanged: (newValue) {
-                    setState(() {
-                      _selectedPeriodicidade = newValue!;
-                      _periodicidadeController.text = newValue['descricao'];
-                      _periodicidadeCodeController.text = newValue['codigo'];
-                      _isPeriodicidadeSelected = true;
-                    });
-                  },
-                  items: _periodicidadeList.map((suggestion) {
-                    return DropdownMenuItem<Map<String, dynamic>>(
-                      value: suggestion,
-                      child: Row(
-                        children: [
-                          Text(suggestion['descricao'] ?? ''),
-                          const SizedBox(width: 10),
-                          Text(suggestion['codigo'] ?? ''),
-                        ],
-                      ),
-                    );
-                  }).toList(),
-                  decoration: const InputDecoration(
-                    labelText: 'Periodicidade:',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: DropdownButtonFormField<Map<String, dynamic>>(
-                  value: _selectedUnidadeMedida!.isNotEmpty
-                      ? _selectedUnidadeMedida
-                      : null,
-                  onChanged: (newValue) {
-                    setState(() {
-                      _selectedUnidadeMedida = newValue!;
-                      _unidadeMedidaController.text =
-                          newValue['descricao_unidade_medida'];
-                      _unidadeMedidaCodeController.text =
-                          newValue['codigo_unidade_medida'];
-                      _isUnidadeMedidaSelected = true;
-                    });
-                  },
-                  items: _unidadeMedidaList.map((suggestion) {
-                    return DropdownMenuItem<Map<String, dynamic>>(
-                      value: suggestion,
-                      child: Row(
-                        children: [
-                          Text(suggestion['descricao_unidade_medida'] ?? ''),
-                          const SizedBox(width: 10),
-                          Text(suggestion['codigo_unidade_medida'] ?? ''),
-                        ],
-                      ),
-                    );
-                  }).toList(),
-                  decoration: const InputDecoration(
-                    labelText: 'Unidade de Medida:',
-                    border: OutlineInputBorder(),
-                  ),
-                  validator: (value) {
-                    if (value == null) {
-                      return 'Por favor, selecione uma unidade de medida';
+                    if (!_unidadeMedidaList.contains(_selectedUnidadeMedida)) {
+                      _unidadeMedidaList.add(_selectedUnidadeMedida!);
                     }
-                    return null;
-                  },
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: TextField(
-                  controller: _tempoAtvController,
-                  decoration: const InputDecoration(
-                    border: OutlineInputBorder(),
-                    labelText: 'Tempo da atividade: ',
-                  ),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: TextField(
-                  controller: _qtyPessoasController,
-                  decoration: const InputDecoration(
-                    border: OutlineInputBorder(),
-                    labelText: 'Quantidade de pessoas: ',
-                  ),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    SizedBox(
-                      width: 180,
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          foregroundColor: Colors.white,
-                          backgroundColor: Colors.black,
-                          elevation: 2,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                        ),
-                        onPressed: () {
-                          Navigator.of(context).pop();
-                        },
-                        child: const Text('Cancelar'),
-                      ),
+                  });
+                },
+                itemBuilder: (context, Map<String, dynamic> suggestion) {
+                  return ListTile(
+                    title: Text(suggestion['descricao_produto'] ?? ''),
+                    subtitle: Row(
+                      children: [
+                        Text(suggestion['codigo_produto'] ?? ''),
+                        const SizedBox(width: 10),
+                      ],
                     ),
-                    SizedBox(
-                      width: 180,
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          foregroundColor: Colors.black,
-                          backgroundColor: ColorConfig.amarelo,
-                          elevation: 2,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                        ),
-                        onPressed: () async {
-                          if (!_isComponentSelected ||
-                              !_isAtvBreveSelected ||
-                              !_isMaterialSelected ||
-                              !_isCondOpSelected ||
-                              !_isPeriodicidadeSelected) {
-                            showDialog(
-                              context: context,
-                              builder: (context) => AlertDialog(
-                                title: const Text("Erro"),
-                                content: const Text(
-                                    "Por favor, selecione todos os valores."),
-                                actions: <Widget>[
-                                  TextButton(
-                                    onPressed: () =>
-                                        Navigator.of(context).pop(),
-                                    child: const Text("OK"),
-                                  ),
-                                ],
-                              ),
-                            );
-                          } else {
-                            int idPonto = await salvarDados();
-                            if (idPonto != -1) {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => PontoDetail(
-                                      id: widget.pontoId,
-                                      planoId: widget.planoId),
-                                ),
-                              );
-                            }
-                          }
-                        },
-                        child: const Text('Salvar'),
-                      ),
-                    ),
-                  ],
+                  );
+                },
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: TextField(
+                controller: _qtyMaterialController,
+                decoration: const InputDecoration(
+                  border: OutlineInputBorder(),
+                  labelText: 'Quantidade de material: ',
                 ),
               ),
-            ],
-          ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: DropdownButtonFormField<Map<String, dynamic>>(
+                value: _selectedCondOp != null && _selectedCondOp!.isNotEmpty
+                    ? _selectedCondOp
+                    : null,
+                onChanged: (newValue) {
+                  setState(() {
+                    _selectedCondOp = newValue!;
+                    _condOpController.text = newValue['descricao'];
+                    _condOpCodeController.text = newValue['codigo'];
+                    _isCondOpSelected = true;
+                  });
+                },
+                items: _condOpList.map((suggestion) {
+                  return DropdownMenuItem<Map<String, dynamic>>(
+                    value: suggestion,
+                    child: Row(
+                      children: [
+                        Text(
+                          suggestion['descricao'] ?? '',
+                          style: const TextStyle(fontSize: 14),
+                        ),
+                      ],
+                    ),
+                  );
+                }).toList(),
+                decoration: const InputDecoration(
+                  labelText: 'Condição de operação:',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: DropdownButtonFormField<Map<String, dynamic>>(
+                value: _selectedPeriodicidade != null &&
+                        _selectedPeriodicidade!.isNotEmpty
+                    ? _selectedPeriodicidade
+                    : null,
+                onChanged: (newValue) {
+                  setState(() {
+                    _selectedPeriodicidade = newValue!;
+                    _periodicidadeController.text = newValue['descricao'];
+                    _periodicidadeCodeController.text = newValue['codigo'];
+                    _isPeriodicidadeSelected = true;
+                  });
+                },
+                items: _periodicidadeList.map((suggestion) {
+                  return DropdownMenuItem<Map<String, dynamic>>(
+                    value: suggestion,
+                    child: Row(
+                      children: [
+                        Text(suggestion['descricao'] ?? ''),
+                        const SizedBox(width: 10),
+                        Text(suggestion['codigo'] ?? ''),
+                      ],
+                    ),
+                  );
+                }).toList(),
+                decoration: const InputDecoration(
+                  labelText: 'Periodicidade:',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: DropdownButtonFormField<Map<String, dynamic>>(
+                value: _selectedUnidadeMedida != null &&
+                        _selectedUnidadeMedida!.isNotEmpty
+                    ? _selectedUnidadeMedida
+                    : null,
+                onChanged: (newValue) {
+                  setState(() {
+                    _selectedUnidadeMedida = newValue!;
+                    _unidadeMedidaController.text =
+                        newValue['descricao_unidade_medida'];
+                    _unidadeMedidaCodeController.text =
+                        newValue['codigo_unidade_medida'];
+                    _isUnidadeMedidaSelected = true;
+                  });
+                },
+                items: _unidadeMedidaList.map((suggestion) {
+                  return DropdownMenuItem<Map<String, dynamic>>(
+                    value: suggestion,
+                    child: Row(
+                      children: [
+                        Text(suggestion['descricao_unidade_medida'] ?? ''),
+                        const SizedBox(width: 10),
+                        Text(suggestion['codigo_unidade_medida'] ?? ''),
+                      ],
+                    ),
+                  );
+                }).toList(),
+                decoration: const InputDecoration(
+                  labelText: 'Unidade de Medida:',
+                  border: OutlineInputBorder(),
+                ),
+                validator: (value) {
+                  if (value == null) {
+                    return 'Por favor, selecione uma unidade de medida';
+                  }
+                  return null;
+                },
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: TextField(
+                controller: _tempoAtvController,
+                decoration: const InputDecoration(
+                  border: OutlineInputBorder(),
+                  labelText: 'Tempo da atividade: ',
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: TextField(
+                controller: _qtyPessoasController,
+                decoration: const InputDecoration(
+                  border: OutlineInputBorder(),
+                  labelText: 'Quantidade de pessoas: ',
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  SizedBox(
+                    width: 180,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        foregroundColor: Colors.white,
+                        backgroundColor: Colors.black,
+                        elevation: 2,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                      },
+                      child: const Text('Cancelar'),
+                    ),
+                  ),
+                  SizedBox(
+                    width: 180,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        foregroundColor: Colors.black,
+                        backgroundColor: ColorConfig.amarelo,
+                        elevation: 2,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      onPressed: () async {
+                        int idPonto = await salvarDados();
+                        if (idPonto != -1) {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => PontoDetail(
+                                  id: widget.pontoId, planoId: widget.planoId),
+                            ),
+                          );
+                        }
+                      },
+                      child: const Text('Salvar'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
