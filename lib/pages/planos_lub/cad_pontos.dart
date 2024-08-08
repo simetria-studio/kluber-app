@@ -14,11 +14,12 @@ class CadPontos extends StatefulWidget {
   final int idPlano;
   final int idArea;
 
-  const CadPontos(
-      {super.key,
-      required this.conjuntoId,
-      required this.idPlano,
-      required this.idArea});
+  const CadPontos({
+    super.key,
+    required this.conjuntoId,
+    required this.idPlano,
+    required this.idArea,
+  });
 
   @override
   State<CadPontos> createState() => _CadPontosState();
@@ -117,6 +118,7 @@ class _CadPontosState extends State<CadPontos> {
     await _fetchAtvBreve();
     await _fetchCondOp();
     await _fetchUnidadeMedida();
+    await _loadAllCaches(); // Carregar todos os caches ao inicializar
     setState(() {
       userDataLoaded = true;
     });
@@ -160,118 +162,93 @@ class _CadPontosState extends State<CadPontos> {
 
   Future<void> _fetchPeriodicidadeFromApi() async {
     try {
-      var connectivityResult = await (Connectivity().checkConnectivity());
-      if (connectivityResult != ConnectivityResult.none) {
-        final response = await http.post(
-          Uri.parse('${ApiConfig.apiUrl}/get-frequencia'),
-          body: json.encode({"codigo_empresa": '0001'}),
-          headers: {"Content-Type": "application/json"},
-        );
+      final response = await http.post(
+        Uri.parse('${ApiConfig.apiUrl}/get-frequencia'),
+        body: json.encode({"codigo_empresa": '0001'}),
+        headers: {"Content-Type": "application/json"},
+      );
 
-        if (response.statusCode == 200) {
-          final responseData = json.decode(response.body);
-          final SharedPreferences prefs = await SharedPreferences.getInstance();
-          await prefs.setString(
-              'periodicidade_cache', json.encode(responseData));
-          setState(() {
-            _periodicidadeList = List<Map<String, dynamic>>.from(responseData);
-          });
-        } else {
-          print('Falha na requisição: ${response.statusCode}');
-        }
+      if (response.statusCode == 200) {
+        final responseData = json.decode(response.body);
+        final SharedPreferences prefs = await SharedPreferences.getInstance();
+        await prefs.setString('periodicidade_cache', json.encode(responseData));
+        setState(() {
+          _periodicidadeList = List<Map<String, dynamic>>.from(responseData);
+        });
       } else {
-        await _loadPeriodicidadeFromPrefs();
+        print('Falha na requisição: ${response.statusCode}');
       }
     } catch (e) {
       print('Erro ao fazer a requisição: $e');
-      await _loadPeriodicidadeFromPrefs();
     }
   }
 
   Future<void> _fetchAtvBreveFromApi() async {
     try {
-      var connectivityResult = await (Connectivity().checkConnectivity());
-      if (connectivityResult != ConnectivityResult.none) {
-        final response = await http.post(
-          Uri.parse('${ApiConfig.apiUrl}/get-atividade-breve'),
-          body: json.encode({"codigo_empresa": '0001'}),
-          headers: {"Content-Type": "application/json"},
-        );
+      final response = await http.post(
+        Uri.parse('${ApiConfig.apiUrl}/get-atividade-breve'),
+        body: json.encode({"codigo_empresa": '0001'}),
+        headers: {"Content-Type": "application/json"},
+      );
 
-        if (response.statusCode == 200) {
-          final responseData = json.decode(response.body);
-          final SharedPreferences prefs = await SharedPreferences.getInstance();
-          await prefs.setString('atvBreve_cache', json.encode(responseData));
-          setState(() {
-            _atvBreveList = List<Map<String, dynamic>>.from(responseData);
-          });
-        } else {
-          print('Falha na requisição: ${response.statusCode}');
-        }
+      if (response.statusCode == 200) {
+        final responseData = json.decode(response.body);
+        final SharedPreferences prefs = await SharedPreferences.getInstance();
+        await prefs.setString('atvBreve_cache', json.encode(responseData));
+        setState(() {
+          _atvBreveList = List<Map<String, dynamic>>.from(responseData);
+        });
       } else {
-        await _loadAtvBreveFromPrefs();
+        print('Falha na requisição: ${response.statusCode}');
       }
     } catch (e) {
       print('Erro ao fazer a requisição: $e');
-      await _loadAtvBreveFromPrefs();
     }
   }
 
   Future<void> _fetchCondOpFromApi() async {
     try {
-      var connectivityResult = await (Connectivity().checkConnectivity());
-      if (connectivityResult != ConnectivityResult.none) {
-        final response = await http.post(
-          Uri.parse('${ApiConfig.apiUrl}/get-cond-op'),
-          body: json.encode({"codigo_empresa": '0001'}),
-          headers: {"Content-Type": "application/json"},
-        );
+      final response = await http.post(
+        Uri.parse('${ApiConfig.apiUrl}/get-cond-op'),
+        body: json.encode({"codigo_empresa": '0001'}),
+        headers: {"Content-Type": "application/json"},
+      );
 
-        if (response.statusCode == 200) {
-          final responseData = json.decode(response.body);
-          final SharedPreferences prefs = await SharedPreferences.getInstance();
-          await prefs.setString('condOp_cache', json.encode(responseData));
-          setState(() {
-            _condOpList = List<Map<String, dynamic>>.from(responseData);
-          });
-        } else {
-          print('Falha na requisição: ${response.statusCode}');
-        }
+      if (response.statusCode == 200) {
+        final responseData = json.decode(response.body);
+        final SharedPreferences prefs = await SharedPreferences.getInstance();
+        await prefs.setString('condOp_cache', json.encode(responseData));
+        setState(() {
+          _condOpList = List<Map<String, dynamic>>.from(responseData);
+        });
       } else {
-        await _loadCondOpFromPrefs();
+        print('Falha na requisição: ${response.statusCode}');
       }
     } catch (e) {
       print('Erro ao fazer a requisição: $e');
-      await _loadCondOpFromPrefs();
     }
   }
 
   Future<void> _fetchUnidadeMedidaFromApi() async {
     try {
-      var connectivityResult = await (Connectivity().checkConnectivity());
-      if (connectivityResult != ConnectivityResult.none) {
-        final response = await http.post(
-          Uri.parse('${ApiConfig.apiUrl}/get-unidade-med'),
-          body: json.encode({"codigo_empresa": '0001'}),
-          headers: {"Content-Type": "application/json"},
-        );
+      final response = await http.post(
+        Uri.parse('${ApiConfig.apiUrl}/get-unidade-med'),
+        body: json.encode({"codigo_empresa": '0001'}),
+        headers: {"Content-Type": "application/json"},
+      );
 
-        if (response.statusCode == 200) {
-          final responseData = json.decode(response.body);
-          final SharedPreferences prefs = await SharedPreferences.getInstance();
-          await prefs.setString('unidade_cache', json.encode(responseData));
-          setState(() {
-            _unidadeMedidaList = List<Map<String, dynamic>>.from(responseData);
-          });
-        } else {
-          print('Falha na requisição: ${response.statusCode}');
-        }
+      if (response.statusCode == 200) {
+        final responseData = json.decode(response.body);
+        final SharedPreferences prefs = await SharedPreferences.getInstance();
+        await prefs.setString('unidade_cache', json.encode(responseData));
+        setState(() {
+          _unidadeMedidaList = List<Map<String, dynamic>>.from(responseData);
+        });
       } else {
-        await _loadUnidadeMedidaFromPrefs();
+        print('Falha na requisição: ${response.statusCode}');
       }
     } catch (e) {
       print('Erro ao fazer a requisição: $e');
-      await _loadUnidadeMedidaFromPrefs();
     }
   }
 
@@ -330,6 +307,13 @@ class _CadPontosState extends State<CadPontos> {
     }
   }
 
+  Future<void> _loadAllCaches() async {
+    await _loadPeriodicidadeFromPrefs();
+    await _loadUnidadeMedidaFromPrefs();
+    await _loadAtvBreveFromPrefs();
+    await _loadCondOpFromPrefs();
+  }
+
   Future<int> salvarDados() async {
     try {
       String componentName = _componentController.text;
@@ -378,19 +362,24 @@ class _CadPontosState extends State<CadPontos> {
     }
   }
 
+  Future<List<Map<String, dynamic>>> _fetchMaterial(String searchText) async {
+    return _fetchData('get-material', searchText, 'materiais_cache_$searchText',
+        'materiais_cache');
+  }
+
+  Future<List<Map<String, dynamic>>> _fetchComponents(String searchText) async {
+    return _fetchData('get-components', searchText,
+        'componentes_cache_$searchText', 'componentes_cache');
+  }
+
   Future<List<Map<String, dynamic>>> _fetchData(String endpoint,
       String searchText, String cacheKey, String offlineKey) async {
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
-    var cachedData = prefs.getString(cacheKey);
-
-    if (cachedData != null) {
-      return List<Map<String, dynamic>>.from(json.decode(cachedData));
-    }
-
     var connectivityResult = await (Connectivity().checkConnectivity());
     if (connectivityResult == ConnectivityResult.none) {
+      print('Sem conexão. Carregando dados offline.');
       return _fetchOfflineData(searchText, offlineKey);
     } else {
+      print('Com conexão. Tentando buscar dados da API.');
       return _fetchDataFromApi(endpoint, searchText, cacheKey, offlineKey);
     }
   }
@@ -398,25 +387,22 @@ class _CadPontosState extends State<CadPontos> {
   Future<List<Map<String, dynamic>>> _fetchDataFromApi(String endpoint,
       String searchText, String cacheKey, String offlineKey) async {
     try {
-      var connectivityResult = await (Connectivity().checkConnectivity());
-      if (connectivityResult != ConnectivityResult.none) {
-        final response = await http.post(
-          Uri.parse('${ApiConfig.apiUrl}/$endpoint'),
-          body: json
-              .encode({"codigo_empresa": '0001', "search_text": searchText}),
-          headers: {"Content-Type": "application/json"},
-        );
+      final response = await http.post(
+        Uri.parse('${ApiConfig.apiUrl}/$endpoint'),
+        body:
+            json.encode({"codigo_empresa": '0001', "search_text": searchText}),
+        headers: {"Content-Type": "application/json"},
+      );
 
-        if (response.statusCode == 200) {
-          final responseData = json.decode(response.body);
-          final SharedPreferences prefs = await SharedPreferences.getInstance();
-          await prefs.setString(cacheKey, json.encode(responseData));
-          return List<Map<String, dynamic>>.from(responseData);
-        } else {
-          print('Falha na requisição: ${response.statusCode}');
-          return _fetchOfflineData(searchText, offlineKey);
-        }
+      if (response.statusCode == 200) {
+        final responseData = json.decode(response.body);
+        final SharedPreferences prefs = await SharedPreferences.getInstance();
+        await prefs.setString(offlineKey, json.encode(responseData));
+        print(
+            'Dados de $endpoint armazenados no cache com a chave $offlineKey.');
+        return List<Map<String, dynamic>>.from(responseData);
       } else {
+        print('Falha na requisição: ${response.statusCode}');
         return _fetchOfflineData(searchText, offlineKey);
       }
     } catch (e) {
@@ -432,30 +418,17 @@ class _CadPontosState extends State<CadPontos> {
 
     if (dataString != null) {
       final List<dynamic> dataJson = json.decode(dataString);
+      print('Dados carregados do cache com a chave $offlineKey.');
       return List<Map<String, dynamic>>.from(dataJson).where((item) {
         final descricao = item['descricao'] as String?;
         return descricao?.toLowerCase().contains(searchText.toLowerCase()) ??
             false;
       }).toList();
     } else {
+      print('Nenhum dado em cache encontrado para $offlineKey');
       return [];
     }
   }
-
-  Future<List<Map<String, dynamic>>> _fetchComponents(String searchText) async {
-    return _fetchData('get-components', searchText,
-        'componentes_cache_$searchText', 'componentes');
-  }
-
-  Future<List<Map<String, dynamic>>> _fetchMaterial(String searchText) async {
-    return _fetchData(
-        'get-material', searchText, 'materiais_cache_$searchText', 'materiais');
-  }
-
-  // Future<List<Map<String, dynamic>>> _fetchCondOp(String searchText) async {
-  //   return _fetchData(
-  //       'get-cond-op', searchText, 'condOp_cache_$searchText', 'condOp');
-  // }
 
   @override
   Widget build(BuildContext context) {

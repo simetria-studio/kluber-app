@@ -1866,8 +1866,8 @@ class _AreaState extends State<Arvore> {
             ),
           ),
           Positioned(
-            right: 10,
-            bottom: 20,
+            left: 10,
+            bottom: 90,
             child: FloatingActionButton(
               backgroundColor: ColorConfig.amarelo,
               onPressed: _scrollToBottom,
