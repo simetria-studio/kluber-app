@@ -302,7 +302,7 @@ class _CadPlanoLubState extends State<CadPlanoLub> {
       appBar: AppBar(
         title: Center(
           child: Text(
-            'Novo de Plano de Lubrificação'.toUpperCase(),
+            'Novo Plano de Lubrificação'.toUpperCase(),
             style: const TextStyle(
               color: Color(0xFF000000),
               fontSize: 16,

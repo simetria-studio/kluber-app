@@ -54,41 +54,6 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
           ),
-          SizedBox(
-            width: 180,
-            height: 180,
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                foregroundColor: Colors.black,
-                backgroundColor: ColorConfig.amarelo, // Cor do ícone e do texto
-                elevation: 2, // Elevação do botão
-                shape: RoundedRectangleBorder(
-                  borderRadius:
-                      BorderRadius.circular(10), // Cantos arredondados
-                ),
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 10), // Espaçamento interno do botão
-              ),
-              onPressed: () {
-                // Ação quando o botão é pressionado
-              },
-              child: const Column(
-                mainAxisSize:
-                    MainAxisSize.min, // Use min para evitar esticar a coluna
-                children: <Widget>[
-                  Image(image: AssetImage('assets/oil.png')),
-                  Text(
-                    'MAQUINAS PESADAS', // O texto que você quer exibir
-                    textAlign: TextAlign.center, // Centraliza o texto
-                    style: TextStyle(
-                      fontSize: 16, // O tamanho da fonte do texto
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
         ]),
       ),
       floatingActionButton: FloatBtn.build(

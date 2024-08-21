@@ -181,6 +181,10 @@ class _PontoDetailState extends State<PontoDetail> {
                           'Quantidade de pessoas',
                           _pontoDetails!['qty_pessoas'].toString(),
                           Icons.group),
+                      _buildDetailItem(
+                          'Unidade de medida',
+                          _pontoDetails!['unidade_medida_name'].toString(),
+                          Icons.group),
 
                       // Adicione mais itens aqui
                       const Divider(),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:kluber/class/color_config.dart';
 import 'package:kluber/pages/homepage.dart';
 import 'package:kluber/pages/planos_lub/cad_plano.dart';
+import 'package:kluber/pages/planos_lub/delete_cache.dart';
 import 'package:kluber/pages/planos_lub/versao.dart';
 // Importe a tela HomePage aqui
 
@@ -45,7 +46,11 @@ class FloatBtn {
           const SizedBox(width: 48), // O espaço para o FloatingActionButton
           IconButton(
             icon: const Icon(Icons.settings),
-            onPressed: () {},
+            onPressed: () {
+              Navigator.of(context).push(MaterialPageRoute(
+                builder: (context) => const DeleteCache(),
+              ));
+            },
             color: ColorConfig.preto,
           ),
           IconButton(

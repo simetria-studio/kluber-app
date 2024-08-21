@@ -125,8 +125,16 @@ class _EditPontoState extends State<EditPonto> {
           (element) =>
               element['codigo_unidade_medida'] ==
               ponto['unidade_medida_codigo'],
-          orElse: () => <String, dynamic>{},
+          orElse: () {
+            return <String, dynamic>{};
+          },
         );
+
+        // Preenche os campos de unidade de medida, mesmo que nenhum valor seja alterado
+        _unidadeMedidaController.text =
+            _selectedUnidadeMedida?['descricao_unidade_medida'] ?? '';
+        _unidadeMedidaCodeController.text =
+            _selectedUnidadeMedida?['codigo_unidade_medida'] ?? '';
       });
     }
   }
@@ -602,17 +610,28 @@ class _EditPontoState extends State<EditPonto> {
                     _materialCodeController.text = suggestion['codigo_produto'];
                     _isMaterialSelected = true;
 
+                    // Atualizar a unidade de medida ao selecionar o material
                     _selectedUnidadeMedida = _unidadeMedidaList.firstWhere(
                       (element) =>
                           element['descricao_unidade_medida'] ==
                           suggestion['unidade_medida'],
-                      orElse: () => {
-                        'descricao_unidade_medida':
-                            suggestion['unidade_medida'],
-                        'codigo_unidade_medida': ''
+                      orElse: () {
+                        return {
+                          'descricao_unidade_medida':
+                              suggestion['unidade_medida'],
+                          'codigo_unidade_medida': 'manual',
+                        };
                       },
                     );
 
+                    _unidadeMedidaController.text =
+                        _selectedUnidadeMedida?['descricao_unidade_medida'] ??
+                            '';
+                    _unidadeMedidaCodeController.text =
+                        _selectedUnidadeMedida?['codigo_unidade_medida'] ?? '';
+                    _isUnidadeMedidaSelected = true;
+
+                    // Evitar duplicatas na lista
                     if (!_unidadeMedidaList.contains(_selectedUnidadeMedida)) {
                       _unidadeMedidaList.add(_selectedUnidadeMedida!);
                     }

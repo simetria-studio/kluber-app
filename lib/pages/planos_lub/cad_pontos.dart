@@ -114,11 +114,36 @@ class _CadPontosState extends State<CadPontos> {
   }
 
   Future<void> initializeData() async {
-    await _fetchPeriodicidade();
-    await _fetchAtvBreve();
-    await _fetchCondOp();
-    await _fetchUnidadeMedida();
-    await _loadAllCaches(); // Carregar todos os caches ao inicializar
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+
+    // Verificar se os dados de periodicidade já estão no cache
+    if (prefs.getString('periodicidade_cache') == null) {
+      await _fetchPeriodicidade();
+    } else {
+      await _loadPeriodicidadeFromPrefs();
+    }
+
+    // Verificar se os dados de atividade breve já estão no cache
+    if (prefs.getString('atvBreve_cache') == null) {
+      await _fetchAtvBreve();
+    } else {
+      await _loadAtvBreveFromPrefs();
+    }
+
+    // Verificar se os dados de condição operacional já estão no cache
+    if (prefs.getString('condOp_cache') == null) {
+      await _fetchCondOp();
+    } else {
+      await _loadCondOpFromPrefs();
+    }
+
+    // Verificar se os dados de unidade de medida já estão no cache
+    if (prefs.getString('unidade_cache') == null) {
+      await _fetchUnidadeMedida();
+    } else {
+      await _loadUnidadeMedidaFromPrefs();
+    }
+
     setState(() {
       userDataLoaded = true;
     });
@@ -307,15 +332,103 @@ class _CadPontosState extends State<CadPontos> {
     }
   }
 
-  Future<void> _loadAllCaches() async {
-    await _loadPeriodicidadeFromPrefs();
-    await _loadUnidadeMedidaFromPrefs();
-    await _loadAtvBreveFromPrefs();
-    await _loadCondOpFromPrefs();
+  Future<List<Map<String, dynamic>>> _fetchComponents(String searchText) async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    final String? cachedData = prefs.getString('componentes_cache');
+
+    // Verifica se há dados no cache
+    if (cachedData != null) {
+      print('Dados de componentes carregados do cache.');
+      return _filterOfflineData(cachedData, searchText, 'descricao');
+    } else {
+      print('Sem dados de componentes no cache, buscando do servidor...');
+      return _fetchComponentsFromApi(searchText);
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> _fetchComponentsFromApi(
+      String searchText) async {
+    try {
+      final response = await http.post(
+        Uri.parse('${ApiConfig.apiUrl}/get-components'),
+        body:
+            json.encode({"codigo_empresa": '0001', "search_text": searchText}),
+        headers: {"Content-Type": "application/json"},
+      );
+
+      if (response.statusCode == 200) {
+        final responseData = json.decode(response.body);
+        final SharedPreferences prefs = await SharedPreferences.getInstance();
+        await prefs.setString('componentes_cache', json.encode(responseData));
+
+        print('Dados de componentes armazenados no cache.');
+        return List<Map<String, dynamic>>.from(responseData);
+      } else {
+        print('Falha na requisição: ${response.statusCode}');
+        return [];
+      }
+    } catch (e) {
+      print('Erro ao fazer a requisição: $e');
+      return [];
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> _fetchMaterial(String searchText) async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    final String? cachedData = prefs.getString('materiais_cache');
+
+    // Verifica se há dados no cache
+    if (cachedData != null) {
+      print('Dados de materiais carregados do cache.');
+      return _filterOfflineData(cachedData, searchText, 'descricao_produto');
+    } else {
+      print('Sem dados de materiais no cache, buscando do servidor...');
+      return _fetchMaterialFromApi(searchText);
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> _fetchMaterialFromApi(
+      String searchText) async {
+    try {
+      final response = await http.post(
+        Uri.parse('${ApiConfig.apiUrl}/get-material'),
+        body:
+            json.encode({"codigo_empresa": '0001', "search_text": searchText}),
+        headers: {"Content-Type": "application/json"},
+      );
+
+      if (response.statusCode == 200) {
+        final responseData = json.decode(response.body);
+        final SharedPreferences prefs = await SharedPreferences.getInstance();
+        await prefs.setString('materiais_cache', json.encode(responseData));
+
+        print('Dados de materiais armazenados no cache.');
+        return List<Map<String, dynamic>>.from(responseData);
+      } else {
+        print('Falha na requisição: ${response.statusCode}');
+        return [];
+      }
+    } catch (e) {
+      print('Erro ao fazer a requisição: $e');
+      return [];
+    }
+  }
+
+  List<Map<String, dynamic>> _filterOfflineData(
+      String cachedData, String searchText, String fieldToFilter) {
+    final List<dynamic> dataJson = json.decode(cachedData);
+    return List<Map<String, dynamic>>.from(dataJson).where((item) {
+      final descricao = item[fieldToFilter]?.toLowerCase() ?? '';
+      return descricao.contains(searchText.toLowerCase());
+    }).toList();
   }
 
   Future<int> salvarDados() async {
     try {
+      print(
+          "Código do Material no Salvamento: ${_unidadeMedidaCodeController.text}");
+
+      // Certifique-se de que o valor está sendo coletado corretamente
       String componentName = _componentController.text;
       String componentCodigo = _componentCodeController.text;
       String qtyPontos = _qtyPontosController.text;
@@ -334,6 +447,13 @@ class _CadPontosState extends State<CadPontos> {
       String unidadeMedidaCodigo = _unidadeMedidaCodeController.text;
       int conjuntoEquipId = widget.conjuntoId;
 
+      // Validar se o código do material foi atribuído
+      if (_materialCodeController.text.isEmpty) {
+        print("O código do material está vazio!");
+        // Exibir um erro ou alertar o usuário
+      }
+
+      // Código para salvar no banco de dados
       Map<String, dynamic> subAreaCad = {
         'component_name': componentName,
         'component_codigo': componentCodigo,
@@ -355,78 +475,32 @@ class _CadPontosState extends State<CadPontos> {
         'plano_id': widget.idPlano,
       };
 
+      // Verifique se os valores estão preenchidos
+      print("Unidade de Medida Nome: $unidadeMedidaName");
+      print("Unidade de Medida Código: $unidadeMedidaCodigo");
+
+      // Validação antes de salvar
+      if (unidadeMedidaName.isEmpty || unidadeMedidaCodigo.isEmpty) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text("Erro"),
+            content: const Text("Por favor, selecione a unidade de medida."),
+            actions: <Widget>[
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text("OK"),
+              ),
+            ],
+          ),
+        );
+        return -1;
+      }
+
       int id = await _databaseHelper.insertPontos(subAreaCad);
       return id;
     } catch (e) {
       return -1;
-    }
-  }
-
-  Future<List<Map<String, dynamic>>> _fetchMaterial(String searchText) async {
-    return _fetchData('get-material', searchText, 'materiais_cache_$searchText',
-        'materiais_cache');
-  }
-
-  Future<List<Map<String, dynamic>>> _fetchComponents(String searchText) async {
-    return _fetchData('get-components', searchText,
-        'componentes_cache_$searchText', 'componentes_cache');
-  }
-
-  Future<List<Map<String, dynamic>>> _fetchData(String endpoint,
-      String searchText, String cacheKey, String offlineKey) async {
-    var connectivityResult = await (Connectivity().checkConnectivity());
-    if (connectivityResult == ConnectivityResult.none) {
-      print('Sem conexão. Carregando dados offline.');
-      return _fetchOfflineData(searchText, offlineKey);
-    } else {
-      print('Com conexão. Tentando buscar dados da API.');
-      return _fetchDataFromApi(endpoint, searchText, cacheKey, offlineKey);
-    }
-  }
-
-  Future<List<Map<String, dynamic>>> _fetchDataFromApi(String endpoint,
-      String searchText, String cacheKey, String offlineKey) async {
-    try {
-      final response = await http.post(
-        Uri.parse('${ApiConfig.apiUrl}/$endpoint'),
-        body:
-            json.encode({"codigo_empresa": '0001', "search_text": searchText}),
-        headers: {"Content-Type": "application/json"},
-      );
-
-      if (response.statusCode == 200) {
-        final responseData = json.decode(response.body);
-        final SharedPreferences prefs = await SharedPreferences.getInstance();
-        await prefs.setString(offlineKey, json.encode(responseData));
-        print(
-            'Dados de $endpoint armazenados no cache com a chave $offlineKey.');
-        return List<Map<String, dynamic>>.from(responseData);
-      } else {
-        print('Falha na requisição: ${response.statusCode}');
-        return _fetchOfflineData(searchText, offlineKey);
-      }
-    } catch (e) {
-      print('Erro ao fazer a requisição: $e');
-      return _fetchOfflineData(searchText, offlineKey);
-    }
-  }
-
-  Future<List<Map<String, dynamic>>> _fetchOfflineData(
-      String searchText, String offlineKey) async {
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
-    final String? dataString = prefs.getString(offlineKey);
-
-    if (dataString != null) {
-      final List<dynamic> dataJson = json.decode(dataString);
-      print('Dados carregados do cache com a chave $offlineKey.');
-      return List<Map<String, dynamic>>.from(dataJson).where((item) {
-        final descricao = item['descricao'] as String?;
-        return descricao?.toLowerCase().contains(searchText.toLowerCase()) ??
-            false;
-      }).toList();
-    } else {
-      print('Nenhum dado em cache encontrado para $offlineKey');
-      return [];
     }
   }
 
@@ -551,23 +625,43 @@ class _CadPontosState extends State<CadPontos> {
                           suggestion['codigo_produto'];
                       _isMaterialSelected = true;
 
-                      // Atualiza a unidade de medida selecionada
+                      print(
+                          "Selecionado material: ${suggestion['descricao_produto']}");
+
+                      // Procurando na lista
                       _selectedUnidadeMedida = _unidadeMedidaList.firstWhere(
                         (element) =>
                             element['descricao_unidade_medida'] ==
                             suggestion['unidade_medida'],
-                        orElse: () => {
-                          'descricao_unidade_medida':
-                              suggestion['unidade_medida'],
-                          'codigo_unidade_medida': ''
+                        orElse: () {
+                          print(
+                              "Unidade de medida não encontrada na lista, adicionando manualmente.");
+                          // Atribuir um código único se a unidade de medida não foi encontrada
+                          return {
+                            'descricao_unidade_medida':
+                                suggestion['unidade_medida'],
+                            'codigo_unidade_medida':
+                                'manual-${suggestion['unidade_medida'] ?? ''}'
+                          };
                         },
                       );
 
-                      // Se a unidade de medida não estiver na lista, adicione-a
+                      // Evitar duplicatas na lista
                       if (!_unidadeMedidaList
                           .contains(_selectedUnidadeMedida)) {
                         _unidadeMedidaList.add(_selectedUnidadeMedida!);
                       }
+
+                      _unidadeMedidaController.text =
+                          _selectedUnidadeMedida?['descricao_unidade_medida'] ??
+                              '';
+                      _unidadeMedidaCodeController.text =
+                          _selectedUnidadeMedida?['codigo_unidade_medida'] ??
+                              '';
+                      _isUnidadeMedidaSelected = true;
+
+                      print(
+                          "Unidade de Medida Nome: ${_unidadeMedidaController.text}, Código: ${_unidadeMedidaCodeController.text}");
                     });
                   },
                   itemBuilder: (context, Map<String, dynamic> suggestion) {
@@ -751,6 +845,7 @@ class _CadPontosState extends State<CadPontos> {
                               !_isAtvBreveSelected ||
                               !_isMaterialSelected ||
                               !_isCondOpSelected ||
+                              !_isUnidadeMedidaSelected ||
                               !_isPeriodicidadeSelected) {
                             showDialog(
                               context: context,
