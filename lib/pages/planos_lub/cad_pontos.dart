@@ -641,7 +641,7 @@ class _CadPontosState extends State<CadPontos> {
                             'descricao_unidade_medida':
                                 suggestion['unidade_medida'],
                             'codigo_unidade_medida':
-                                'manual-${suggestion['unidade_medida'] ?? ''}'
+                                '${suggestion['unidade_medida'] ?? ''}'
                           };
                         },
                       );
