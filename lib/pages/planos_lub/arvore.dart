@@ -378,7 +378,7 @@ class _AreaState extends State<Arvore> {
                 Card(
                   elevation: 4,
                   child: Padding(
-                    padding: const EdgeInsets.all(8.0),
+                    padding: const EdgeInsets.all(10.0),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.start,
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -462,7 +462,7 @@ class _AreaState extends State<Arvore> {
                                 Expanded(
                                   flex:
                                       3, // Isso permite que o widget de texto ocupe 75% do espaço
-                                  child: Row(
+                                  child: Wrap(
                                     children: [
                                       const Text(
                                         'Área: ',
@@ -730,7 +730,7 @@ class _AreaState extends State<Arvore> {
                                                         padding:
                                                             const EdgeInsets
                                                                 .all(4.0),
-                                                        child: Row(
+                                                        child: Wrap(
                                                           children: [
                                                             const Text(
                                                                 'Subarea: ',
@@ -966,7 +966,7 @@ class _AreaState extends State<Arvore> {
                                                             padding:
                                                                 const EdgeInsets
                                                                     .all(4.0),
-                                                            child: Row(
+                                                            child: Wrap(
                                                               children: [
                                                                 const Text(
                                                                     'Linha: ',
@@ -1219,13 +1219,13 @@ class _AreaState extends State<Arvore> {
                                                                               mainAxisAlignment: MainAxisAlignment.start,
                                                                               crossAxisAlignment: CrossAxisAlignment.start,
                                                                               children: [
-                                                                                Row(
+                                                                                Wrap(
                                                                                   children: [
                                                                                     const Text('Tag: ', style: TextStyle(fontSize: 14)),
                                                                                     Text(tagMaquina.tagNome, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
                                                                                   ],
                                                                                 ),
-                                                                                Row(
+                                                                                Wrap(
                                                                                   children: [
                                                                                     const Text('Máq: ', style: TextStyle(fontSize: 14)),
                                                                                     Text(tagMaquina.maquinaNome, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
@@ -1643,13 +1643,16 @@ class _AreaState extends State<Arvore> {
                                                                                   mainAxisAlignment: MainAxisAlignment.start,
                                                                                   crossAxisAlignment: CrossAxisAlignment.start,
                                                                                   children: [
-                                                                                    Row(
+                                                                                    Wrap(
                                                                                       children: [
                                                                                         const Text('Con: ', style: TextStyle(fontSize: 14)),
-                                                                                        Text(conjuntoEquip.conjNome, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                                                                                        Text(
+                                                                                          conjuntoEquip.conjNome,
+                                                                                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                                                                                        ),
                                                                                       ],
                                                                                     ),
-                                                                                    Row(
+                                                                                    Wrap(
                                                                                       children: [
                                                                                         const Text('Equi: ', style: TextStyle(fontSize: 14)),
                                                                                         Text(conjuntoEquip.equiNome, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
