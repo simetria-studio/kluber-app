@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:kluber/class/api_config.dart';
 import 'package:kluber/pages/homepage.dart';
+import 'package:kluber/pages/solicitar_visita_screen.dart';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
@@ -30,7 +31,6 @@ class _LoginPageState extends State<LoginPage> {
       );
       return; // Encerra a função para evitar a execução do login novamente
     }
-    final GlobalKey<ScaffoldState> scaffoldKey = GlobalKey<ScaffoldState>();
     final String usuario = _usuarioController.text;
     final String password = _senhaController.text;
 
@@ -253,7 +253,45 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 60),
+                  const SizedBox(height: 20),
+                  // Botão para solicitar acesso
+                  Container(
+                    margin: const EdgeInsets.only(
+                        top: 10.0, left: 12.0, right: 12.0),
+                    child: SizedBox(
+                      width: double.infinity,
+                      height: 50,
+                      child: Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: OutlinedButton(
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: const Color(0xFFFABA00),
+                            side: const BorderSide(color: Color(0xFFFABA00)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const SolicitacaoAcessoScreen(),
+                              ),
+                            );
+                          },
+                          child: const Text(
+                            'Solicitar Acesso',
+                            style: TextStyle(
+                              color: Color(0xFFFABA00),
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 40),
                   Container(
                     margin: const EdgeInsets.only(top: 40.0),
                     child: Image.asset('assets/logo_rentatec.png'),
